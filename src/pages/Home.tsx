@@ -23,20 +23,20 @@ export default function Home() {
           <motion.div initial="hidden" animate="show" variants={fadeUp} transition={{ duration: 0.6 }}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-purple-500/40 bg-purple-500/10 text-purple-300 text-sm font-medium mb-8">
             <Sparkles size={14} />
-            Institute of Technology &bull; Batch 2024
+            Institute of Engineering & Technology &bull; Batch 2024
           </motion.div>
 
           <motion.h1 initial="hidden" animate="show" variants={fadeUp} transition={{ duration: 0.6, delay: 0.1 }}
             className="text-5xl sm:text-7xl md:text-8xl font-black tracking-tight mb-4">
-            <span className="text-white">Fresh</span>
-            <span className="bg-gradient-to-r from-amber-400 to-amber-200 bg-clip-text text-transparent">ero</span>
+            <span className="text-white">Ignite</span>
+            <span className="bg-gradient-to-r from-amber-400 to-amber-200 bg-clip-text text-transparent">'26</span>
             <br />
-            <span className="text-3xl sm:text-4xl md:text-5xl font-light text-purple-300 tracking-widest">2025</span>
+            <span className="text-3xl sm:text-4xl md:text-5xl font-light text-purple-300 tracking-widest">2026</span>
           </motion.h1>
 
           <motion.p initial="hidden" animate="show" variants={fadeUp} transition={{ duration: 0.6, delay: 0.2 }}
             className="text-lg sm:text-xl text-gray-300 max-w-2xl mx-auto mb-10">
-            Welcome to the grandest fresher night of the year. A night of music, dance, fashion, and unforgettable memories.
+            Welcome to the grandest fresher of the year. An event of music, dance, fashion, and unforgettable memories.
           </motion.p>
 
           <motion.div initial="hidden" animate="show" variants={fadeUp} transition={{ duration: 0.6, delay: 0.3 }}
@@ -72,9 +72,9 @@ export default function Home() {
           <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}
             className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
-              { icon: Calendar, label: 'Date', value: 'September 15, 2025', color: 'purple' },
-              { icon: Clock, label: 'Time', value: '6:00 PM Onwards', color: 'amber' },
-              { icon: MapPin, label: 'Venue', value: 'Main Auditorium, Block A', color: 'pink' },
+              { icon: Calendar, label: 'Date', value: 'March 15, 2026', color: 'purple' },
+              { icon: Clock, label: 'Time', value: '11:00 AM Onwards', color: 'amber' },
+              { icon: MapPin, label: 'Venue', value: 'Top secret', color: 'pink' },
             ].map((item, i) => (
               <motion.div key={item.label} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }} transition={{ delay: i * 0.1 }}
@@ -150,7 +150,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-white/10 py-8 px-4 text-center">
         <p className="text-gray-500 text-sm">
-          &copy; 2025 Freshero &mdash; Organized by the Student Council &bull; Institute of Technology
+          &copy; 2026 Ignite'26 &mdash; Organized by the IGNITE Team &bull; Institute of Engineering & Technology
         </p>
       </footer>
     </div>
