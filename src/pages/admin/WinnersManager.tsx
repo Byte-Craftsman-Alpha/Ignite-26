@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Trophy, Plus, Trash2, ArrowLeft, X, Crown } from 'lucide-react';
@@ -89,7 +89,7 @@ export default function WinnersManager() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0d0a1a] text-white pt-20 pb-16">
+    <div className="min-h-screen bg-[#050510] grid-bg text-white pt-20 pb-16">
       <div className="max-w-5xl mx-auto px-4">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
@@ -108,13 +108,13 @@ export default function WinnersManager() {
 
         {showForm && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-            className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-8">
+            className="bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-2xl p-6 mb-8">
             <h2 className="font-bold text-lg mb-5 flex items-center gap-2"><Crown size={18} className="text-amber-400" /> Add New Winner</h2>
             <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm text-gray-400 mb-1.5">Select Participant (optional)</label>
                 <select value={form.participant_id} onChange={e => handleParticipantSelect(e.target.value)}
-                  className="w-full bg-[#1a1530] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500">
+                  className="w-full bg-[#13132a] border border-[#1e1e3f] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500">
                   <option value="">-- Select participant --</option>
                   {participants.map(p => <option key={p.id} value={p.id}>{p.full_name} ({p.roll_number})</option>)}
                 </select>
@@ -122,44 +122,44 @@ export default function WinnersManager() {
               <div>
                 <label className="block text-sm text-gray-400 mb-1.5">Award Title *</label>
                 <select value={form.award_title} onChange={e => setForm(f => ({ ...f, award_title: e.target.value }))}
-                  className="w-full bg-[#1a1530] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500">
+                  className="w-full bg-[#13132a] border border-[#1e1e3f] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500">
                   <option value="">-- Select award --</option>
                   {AWARDS.map(a => <option key={a} value={a}>{a}</option>)}
                 </select>
                 {form.award_title === 'Custom...' && (
                   <input value={customAward} onChange={e => setCustomAward(e.target.value)}
-                    placeholder="Enter custom award name" className="mt-2 w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-amber-500" />
+                    placeholder="Enter custom award name" className="mt-2 w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-amber-500" />
                 )}
               </div>
               <div>
                 <label className="block text-sm text-gray-400 mb-1.5">Name *</label>
                 <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                   placeholder="Winner's full name"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-amber-500" />
+                  className="w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-amber-500" />
               </div>
               <div>
                 <label className="block text-sm text-gray-400 mb-1.5">Roll No</label>
                 <input value={form.roll_no} onChange={e => setForm(f => ({ ...f, roll_no: e.target.value }))}
                   placeholder="e.g., 24-CS-01"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-amber-500" />
+                  className="w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-amber-500" />
               </div>
               <div>
                 <label className="block text-sm text-gray-400 mb-1.5">Branch</label>
                 <input value={form.branch} onChange={e => setForm(f => ({ ...f, branch: e.target.value }))}
                   placeholder="e.g., CSE"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-amber-500" />
+                  className="w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-amber-500" />
               </div>
               <div>
                 <label className="block text-sm text-gray-400 mb-1.5">Photo URL</label>
                 <input value={form.image_url} onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))}
                   placeholder="https://..."
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-amber-500" />
+                  className="w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-amber-500" />
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm text-gray-400 mb-1.5">Description</label>
                 <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
                   placeholder="Why they won this award..." rows={2}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-amber-500 resize-none" />
+                  className="w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-amber-500 resize-none" />
               </div>
               {error && <p className="md:col-span-2 text-red-400 text-sm">{error}</p>}
               <div className="md:col-span-2">
@@ -176,7 +176,7 @@ export default function WinnersManager() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {winners.map(w => (
               <motion.div key={w.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                className="bg-white/5 border border-white/10 rounded-2xl p-5 relative group">
+                className="bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-2xl p-5 relative group">
                 <button onClick={() => handleDelete(w.id)} disabled={deleting === w.id}
                   className="absolute top-4 right-4 w-8 h-8 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/20">
                   {deleting === w.id ? '...' : <Trash2 size={14} />}
@@ -185,7 +185,7 @@ export default function WinnersManager() {
                   {w.image_url ? (
                     <img src={w.image_url} alt={w.name} className="w-12 h-12 rounded-full object-cover" />
                   ) : (
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-600 to-amber-500 flex items-center justify-center font-bold">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#ff2d78] to-[#7c3aed] flex items-center justify-center font-bold">
                       {w.name.charAt(0)}
                     </div>
                   )}
@@ -213,3 +213,4 @@ export default function WinnersManager() {
     </div>
   );
 }
+

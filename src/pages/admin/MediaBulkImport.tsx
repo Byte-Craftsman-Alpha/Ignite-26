@@ -119,7 +119,7 @@ export default function MediaBulkImport() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0d0a1a] text-white pt-20 pb-16">
+    <div className="min-h-screen bg-[#050510] grid-bg text-white pt-20 pb-16">
       <div className="max-w-5xl mx-auto px-4">
         <div className="flex items-center gap-4 mb-8">
           <Link to="/admin/upload" className="text-gray-400 hover:text-white">
@@ -132,42 +132,42 @@ export default function MediaBulkImport() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <form onSubmit={handleBulkFiles} className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-4">
+          <form onSubmit={handleBulkFiles} className="bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-2xl p-5 space-y-4">
             <h2 className="text-lg font-bold flex items-center gap-2"><Upload size={18} className="text-purple-300" /> Bulk File Upload</h2>
             <input
               type="file"
               accept="image/*,video/*"
               multiple
               onChange={e => setFiles(Array.from(e.target.files || []))}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white file:mr-3 file:rounded-lg file:border-0 file:bg-purple-600/30 file:px-3 file:py-2 file:text-purple-200"
+              className="w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl px-4 py-3 text-white file:mr-3 file:rounded-lg file:border-0 file:bg-purple-600/30 file:px-3 file:py-2 file:text-purple-200"
             />
-            <input value={fileCaption} onChange={e => setFileCaption(e.target.value)} placeholder="Caption (applies to all)" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600" />
-            <select value={fileCategory} onChange={e => setFileCategory(e.target.value)} className="w-full bg-[#1a1530] border border-white/10 rounded-xl px-4 py-3 text-white">
+            <input value={fileCaption} onChange={e => setFileCaption(e.target.value)} placeholder="Caption (applies to all)" className="w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl px-4 py-3 text-white placeholder-gray-600" />
+            <select value={fileCategory} onChange={e => setFileCategory(e.target.value)} className="w-full bg-[#13132a] border border-[#1e1e3f] rounded-xl px-4 py-3 text-white">
               <option value="general">General</option>
               <option value="winner">Winner</option>
             </select>
-            <button type="submit" disabled={fileLoading} className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-amber-500 text-white font-bold disabled:opacity-50">
+            <button type="submit" disabled={fileLoading} className="w-full py-3 rounded-xl bg-gradient-to-r from-[#ff2d78] to-[#7c3aed] text-white font-bold disabled:opacity-50">
               {fileLoading ? 'Uploading...' : 'Upload Files'}
             </button>
             {fileResult && <p className="text-sm text-gray-300 flex items-center gap-2"><CheckCircle2 size={14} className="text-emerald-300" /> {fileResult}</p>}
           </form>
 
-          <form onSubmit={handleDriveImport} className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-4">
+          <form onSubmit={handleDriveImport} className="bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-2xl p-5 space-y-4">
             <h2 className="text-lg font-bold flex items-center gap-2"><Link2 size={18} className="text-amber-300" /> Google Drive Shared Links</h2>
             <textarea
               value={driveLinks}
               onChange={e => setDriveLinks(e.target.value)}
               placeholder="Paste one public Drive link per line"
               rows={6}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 resize-none"
+              className="w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl px-4 py-3 text-white placeholder-gray-600 resize-none"
             />
-            <input value={driveCaption} onChange={e => setDriveCaption(e.target.value)} placeholder="Caption (applies to all)" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600" />
+            <input value={driveCaption} onChange={e => setDriveCaption(e.target.value)} placeholder="Caption (applies to all)" className="w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl px-4 py-3 text-white placeholder-gray-600" />
             <div className="grid grid-cols-2 gap-3">
-              <select value={driveCategory} onChange={e => setDriveCategory(e.target.value)} className="w-full bg-[#1a1530] border border-white/10 rounded-xl px-4 py-3 text-white">
+              <select value={driveCategory} onChange={e => setDriveCategory(e.target.value)} className="w-full bg-[#13132a] border border-[#1e1e3f] rounded-xl px-4 py-3 text-white">
                 <option value="general">General</option>
                 <option value="winner">Winner</option>
               </select>
-              <select value={driveType} onChange={e => setDriveType(e.target.value as 'image' | 'video')} className="w-full bg-[#1a1530] border border-white/10 rounded-xl px-4 py-3 text-white">
+              <select value={driveType} onChange={e => setDriveType(e.target.value as 'image' | 'video')} className="w-full bg-[#13132a] border border-[#1e1e3f] rounded-xl px-4 py-3 text-white">
                 <option value="image">Image Links</option>
                 <option value="video">Video Links</option>
               </select>
@@ -182,3 +182,4 @@ export default function MediaBulkImport() {
     </div>
   );
 }
+

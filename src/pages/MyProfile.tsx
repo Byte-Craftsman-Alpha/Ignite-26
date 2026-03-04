@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { User, Hash, Phone, CheckCircle, XCircle, Search } from 'lucide-react';
 import { getErrorMessage, readJsonSafe } from '../lib/http';
@@ -49,7 +49,7 @@ export default function MyProfile() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0d0a1a] text-white pt-20 pb-16 px-4">
+    <div className="min-h-screen bg-[#050510] grid-bg text-white pt-20 pb-16 px-4">
       <div className="max-w-lg mx-auto">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <div className="text-center mb-10">
@@ -60,14 +60,14 @@ export default function MyProfile() {
             <p className="text-gray-400">Enter your roll number and WhatsApp number to view your registration.</p>
           </div>
 
-          <form onSubmit={handleLookup} className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
+          <form onSubmit={handleLookup} className="bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-2xl p-6 mb-6">
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1.5">Complete Roll Number</label>
                 <div className="relative">
                   <Hash size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
                   <input value={rollNumber} onChange={e => setRollNumber(e.target.value)} placeholder="13-digit numerical roll number" maxLength={13}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500" />
+                    className="w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#ff2d78]" />
                 </div>
               </div>
               <div>
@@ -75,21 +75,21 @@ export default function MyProfile() {
                 <div className="relative">
                   <Phone size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
                   <input value={whatsappNumber} onChange={e => setWhatsappNumber(e.target.value)} placeholder="10-digit WhatsApp number" maxLength={10}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500" />
+                    className="w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#ff2d78]" />
                 </div>
               </div>
             </div>
             {error && <p className="text-red-400 text-sm mt-3">{error}</p>}
             <button type="submit" disabled={loading}
-              className="w-full mt-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-amber-500 text-white font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50">
+              className="w-full mt-5 py-3 rounded-xl bg-gradient-to-r from-[#ff2d78] to-[#7c3aed] text-white font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50">
               <Search size={18} /> {loading ? 'Searching...' : 'Find My Profile'}
             </button>
           </form>
 
           {participant && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-              className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
-              <div className="bg-gradient-to-r from-purple-700 to-amber-600 p-6">
+              className="bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-2xl overflow-hidden">
+              <div className="bg-gradient-to-r from-[#ff2d78] to-[#7c3aed] p-6">
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-2xl font-black">
                     {participant.full_name.charAt(0)}
@@ -149,3 +149,4 @@ export default function MyProfile() {
     </div>
   );
 }
+

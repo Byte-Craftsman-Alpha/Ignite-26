@@ -58,7 +58,7 @@ export default function ActivityLogsHidden() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0d0a1a] text-white pt-20 pb-16">
+      <div className="min-h-screen bg-[#050510] grid-bg text-white pt-20 pb-16">
         <div className="max-w-5xl mx-auto px-4">
           <LoadingSpinner text="Loading logs..." />
         </div>
@@ -67,7 +67,7 @@ export default function ActivityLogsHidden() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0d0a1a] text-white pt-20 pb-16">
+    <div className="min-h-screen bg-[#050510] grid-bg text-white pt-20 pb-16">
       <div className="max-w-5xl mx-auto px-4">
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
           <h1 className="text-2xl font-black">Activity Logs</h1>
@@ -97,3 +97,4 @@ export default function ActivityLogsHidden() {
     </div>
   );
 }
+

@@ -138,7 +138,7 @@ export default function MediaUpload() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0d0a1a] text-white pt-20 pb-16">
+    <div className="min-h-screen bg-[#050510] grid-bg text-white pt-20 pb-16">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
@@ -155,7 +155,7 @@ export default function MediaUpload() {
               setShowForm(!showForm);
               if (!showForm) resetForm();
             }}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700 transition-colors"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#ff2d78] text-white font-semibold hover:bg-[#ff2d78]/90 transition-colors"
           >
             {showForm ? <X size={16} /> : <Plus size={16} />}
             {showForm ? 'Cancel' : 'Add Media'}
@@ -168,7 +168,7 @@ export default function MediaUpload() {
         </div>
 
         {showForm && (
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-8">
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-2xl p-6 mb-8">
             <h2 className="font-bold text-lg mb-5 flex items-center gap-2"><Upload size={18} className="text-purple-400" /> Add New Media</h2>
             <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2 flex gap-2">
@@ -184,11 +184,11 @@ export default function MediaUpload() {
                 <>
                   <div className="md:col-span-2">
                     <label className="block text-sm text-gray-400 mb-1.5">Image/Video URL *</label>
-                    <input value={form.url} onChange={e => setForm(f => ({ ...f, url: e.target.value }))} placeholder="https://..." className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500" />
+                    <input value={form.url} onChange={e => setForm(f => ({ ...f, url: e.target.value }))} placeholder="https://..." className="w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#ff2d78]" />
                   </div>
                   <div>
                     <label className="block text-sm text-gray-400 mb-1.5">Type</label>
-                    <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))} className="w-full bg-[#1a1530] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500">
+                    <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))} className="w-full bg-[#13132a] border border-[#1e1e3f] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#ff2d78]">
                       <option value="image">Image</option>
                       <option value="video">Video</option>
                     </select>
@@ -197,17 +197,17 @@ export default function MediaUpload() {
               ) : (
                 <div className="md:col-span-2">
                   <label className="block text-sm text-gray-400 mb-1.5">Media File *</label>
-                  <input type="file" accept="image/*,video/*" onChange={e => setFile(e.target.files?.[0] || null)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white file:mr-4 file:rounded-lg file:border-0 file:bg-purple-600/30 file:px-3 file:py-2 file:text-purple-200" />
+                  <input type="file" accept="image/*,video/*" onChange={e => setFile(e.target.files?.[0] || null)} className="w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl px-4 py-3 text-white file:mr-4 file:rounded-lg file:border-0 file:bg-purple-600/30 file:px-3 file:py-2 file:text-purple-200" />
                 </div>
               )}
 
               <div>
                 <label className="block text-sm text-gray-400 mb-1.5">Caption</label>
-                <input value={form.caption} onChange={e => setForm(f => ({ ...f, caption: e.target.value }))} placeholder="Optional caption" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500" />
+                <input value={form.caption} onChange={e => setForm(f => ({ ...f, caption: e.target.value }))} placeholder="Optional caption" className="w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#ff2d78]" />
               </div>
               <div>
                 <label className="block text-sm text-gray-400 mb-1.5">Category</label>
-                <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className="w-full bg-[#1a1530] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500">
+                <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className="w-full bg-[#13132a] border border-[#1e1e3f] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#ff2d78]">
                   <option value="general">General</option>
                   <option value="winner">Winner</option>
                 </select>
@@ -215,7 +215,7 @@ export default function MediaUpload() {
 
               {error && <p className="md:col-span-2 text-red-400 text-sm">{error}</p>}
               <div className="md:col-span-2">
-                <button type="submit" disabled={submitting} className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-amber-500 text-white font-bold hover:opacity-90 transition-opacity disabled:opacity-50">
+                <button type="submit" disabled={submitting} className="px-6 py-3 rounded-xl bg-gradient-to-r from-[#ff2d78] to-[#7c3aed] text-white font-bold hover:opacity-90 transition-opacity disabled:opacity-50">
                   {submitting ? 'Uploading...' : 'Save Media'}
                 </button>
               </div>
@@ -230,11 +230,11 @@ export default function MediaUpload() {
             <div className="mb-8">
               <h2 className="text-xl font-bold mb-3">Pending Public Uploads</h2>
               {pendingMedia.length === 0 ? (
-                <div className="p-5 rounded-2xl bg-white/5 border border-white/10 text-sm text-gray-500">No pending submissions.</div>
+                <div className="p-5 rounded-2xl bg-[#0d0d1f]/90 border border-[#1e1e3f] text-sm text-gray-500">No pending submissions.</div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {pendingMedia.map(item => (
-                    <div key={item.id} className="rounded-xl overflow-hidden bg-white/5 border border-white/10">
+                    <div key={item.id} className="rounded-xl overflow-hidden bg-[#0d0d1f]/90 border border-[#1e1e3f]">
                       <img src={item.thumb_url || item.url} alt={item.caption || 'Pending media'} className="w-full aspect-square object-cover" />
                       <div className="p-3">
                         <p className="text-xs text-gray-400 mb-2">By: {item.uploaded_by}</p>
@@ -258,7 +258,7 @@ export default function MediaUpload() {
               <h2 className="text-xl font-bold mb-3">Approved Media</h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {approvedMedia.map(item => (
-                  <motion.div key={item.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="group relative rounded-xl overflow-hidden aspect-square bg-white/5 border border-white/10">
+                  <motion.div key={item.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="group relative rounded-xl overflow-hidden aspect-square bg-[#0d0d1f]/90 border border-[#1e1e3f]">
                     <img src={item.thumb_url || item.url} alt={item.caption} className="w-full h-full object-cover" />
                     {item.type === 'video' && (
                       <div className="absolute left-2 top-2 px-2 py-1 rounded-full bg-black/60 text-xs text-white flex items-center gap-1">
@@ -295,3 +295,4 @@ export default function MediaUpload() {
     </div>
   );
 }
+

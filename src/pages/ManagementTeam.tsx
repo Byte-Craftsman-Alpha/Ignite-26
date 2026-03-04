@@ -50,7 +50,7 @@ export default function ManagementTeam() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#0d0a1a] text-white pt-20 pb-16">
+    <div className="min-h-screen bg-[#050510] grid-bg text-white pt-20 pb-16">
       <div className="max-w-7xl mx-auto px-4">
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-10">
           <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/20 text-indigo-300 text-sm font-medium mb-4">
@@ -125,3 +125,4 @@ export default function ManagementTeam() {
     </div>
   );
 }
+

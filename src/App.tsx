@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+﻿import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Register from './pages/Register';
@@ -15,6 +15,7 @@ import WinnersManager from './pages/admin/WinnersManager';
 import ManagementTeamManager from './pages/admin/ManagementTeamManager';
 import ActivityLogsHidden from './pages/admin/ActivityLogsHidden';
 import AdminGuard from './components/AdminGuard';
+import SiteFooter from './components/SiteFooter';
 
 export default function App() {
   return (
@@ -36,6 +37,8 @@ export default function App() {
         <Route path="/admin/management-team" element={<AdminGuard><ManagementTeamManager /></AdminGuard>} />
         <Route path="/admin/_activity-log-room-26" element={<AdminGuard><ActivityLogsHidden /></AdminGuard>} />
       </Routes>
+      <SiteFooter />
     </BrowserRouter>
   );
 }
+

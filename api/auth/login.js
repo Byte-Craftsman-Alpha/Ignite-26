@@ -23,8 +23,9 @@ export default async function handler(req, res) {
   try {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+    const normalizedEmail = String(email).trim().toLowerCase();
 
-    const user = db.prepare('SELECT id, email, password_hash FROM auth_users WHERE email = ? LIMIT 1').get(email);
+    const user = db.prepare('SELECT id, email, password_hash FROM auth_users WHERE email = ? LIMIT 1').get(normalizedEmail);
 
     if (!user || !verifyPassword(password, user.password_hash)) {
       return res.status(401).json({ error: 'Invalid credentials' });

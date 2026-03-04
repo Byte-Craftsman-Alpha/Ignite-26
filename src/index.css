@@ -1,13 +1,16 @@
+@import url("https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Public+Sans:wght@300;400;500;600;700&display=swap");
 @import "tailwindcss";
 
 @theme {
-  --color-background: #0d0a1a;
+  --color-background: #050510;
+  --color-surface: #0d0d1f;
+  --color-surface2: #13132a;
   --color-foreground: #ffffff;
-  --color-primary: #7c3aed;
-  --color-primary-light: #a855f7;
-  --color-accent: #f59e0b;
-  --color-accent-light: #fbbf24;
-  --color-surface: rgba(255, 255, 255, 0.05);
+  --color-muted: #8892b0;
+  --color-primary: #ff2d78;
+  --color-secondary: #7c3aed;
+  --color-accent: #00f5ff;
+  --color-gold: #ffd700;
 }
 
 * {
@@ -19,22 +22,78 @@ html {
 }
 
 body {
-  background-color: #0d0a1a;
+  background-color: #050510;
   color: #ffffff;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Rajdhani", system-ui, sans-serif;
+  font-weight: 500;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 ::-webkit-scrollbar {
   width: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0d0a1a;
+  background: #050510;
 }
 ::-webkit-scrollbar-thumb {
-  background: #3b1f6b;
+  background: #ff2d78;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #7c3aed;
+}
+
+.font-display {
+  font-family: "Rajdhani", sans-serif;
+}
+
+.font-heading {
+  font-family: "Rajdhani", sans-serif;
+}
+
+.font-body {
+  font-family: "Public Sans", sans-serif;
+  font-weight: 500;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+button,
+label {
+  font-weight: 600;
+}
+
+.neon-pink {
+  text-shadow: 0 0 10px rgba(255, 45, 120, 0.9), 0 0 22px rgba(255, 45, 120, 0.65);
+}
+
+.neon-cyan {
+  text-shadow: 0 0 10px rgba(0, 245, 255, 0.9), 0 0 22px rgba(0, 245, 255, 0.65);
+}
+
+.glow-box-pink {
+  box-shadow: 0 0 15px rgba(255, 45, 120, 0.3), 0 0 35px rgba(255, 45, 120, 0.15), inset 0 0 20px rgba(255, 45, 120, 0.08);
+}
+
+.glow-box-cyan {
+  box-shadow: 0 0 15px rgba(0, 245, 255, 0.26), 0 0 35px rgba(0, 245, 255, 0.12), inset 0 0 20px rgba(0, 245, 255, 0.08);
+}
+
+.gradient-border {
+  background: linear-gradient(#0d0d1f, #0d0d1f) padding-box, linear-gradient(135deg, #ff2d78, #7c3aed, #00f5ff) border-box;
+  border: 1px solid transparent;
+}
+
+.grid-bg {
+  background-image: linear-gradient(rgba(0, 245, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 245, 255, 0.05) 1px, transparent 1px);
+  background-size: 50px 50px;
 }

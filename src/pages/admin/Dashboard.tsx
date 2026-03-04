@@ -211,7 +211,7 @@ export default function AdminDashboard() {
   const checkinPct = stats ? Math.round((stats.checkedIn / (stats.total || 1)) * 100) : 0;
 
   return (
-    <div className="min-h-screen bg-[#0d0a1a] text-white pt-20 pb-16">
+    <div className="min-h-screen bg-[#050510] grid-bg text-white pt-20 pb-16">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -228,7 +228,7 @@ export default function AdminDashboard() {
             <Link to="/admin/winners" className="px-4 py-2 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-300 text-sm flex items-center gap-2 hover:bg-amber-500/30 transition-colors">
               <Trophy size={16} /> Winners
             </Link>
-            <button onClick={fetchData} className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 text-sm flex items-center gap-2 hover:bg-white/10 transition-colors">
+            <button onClick={fetchData} className="px-4 py-2 rounded-xl bg-[#0d0d1f]/90 border border-[#1e1e3f] text-gray-400 text-sm flex items-center gap-2 hover:bg-white/10 transition-colors">
               <RefreshCw size={16} /> Refresh
             </button>
           </div>
@@ -236,7 +236,7 @@ export default function AdminDashboard() {
 
         {stats && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-5 rounded-2xl bg-white/5 border border-white/10">
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-5 rounded-2xl bg-[#0d0d1f]/90 border border-[#1e1e3f]">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-9 h-9 rounded-lg bg-purple-500/20 flex items-center justify-center">
                   <Users size={18} className="text-purple-400" />
@@ -246,7 +246,7 @@ export default function AdminDashboard() {
               <p className="text-3xl font-black">{stats.total}</p>
             </motion.div>
 
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="p-5 rounded-2xl bg-white/5 border border-white/10">
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="p-5 rounded-2xl bg-[#0d0d1f]/90 border border-[#1e1e3f]">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-9 h-9 rounded-lg bg-emerald-500/20 flex items-center justify-center">
                   <UserCheck size={18} className="text-emerald-400" />
@@ -256,7 +256,7 @@ export default function AdminDashboard() {
               <p className="text-3xl font-black text-emerald-400">{stats.checkedIn}</p>
             </motion.div>
 
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="p-5 rounded-2xl bg-white/5 border border-white/10">
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="p-5 rounded-2xl bg-[#0d0d1f]/90 border border-[#1e1e3f]">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-9 h-9 rounded-lg bg-red-500/20 flex items-center justify-center">
                   <XCircle size={18} className="text-red-400" />
@@ -266,7 +266,7 @@ export default function AdminDashboard() {
               <p className="text-3xl font-black text-red-400">{stats.notCheckedIn}</p>
             </motion.div>
 
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="p-5 rounded-2xl bg-white/5 border border-white/10">
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="p-5 rounded-2xl bg-[#0d0d1f]/90 border border-[#1e1e3f]">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-9 h-9 rounded-lg bg-amber-500/20 flex items-center justify-center">
                   <CheckCircle size={18} className="text-amber-400" />
@@ -279,7 +279,7 @@ export default function AdminDashboard() {
         )}
 
         {stats && (
-          <div className="mb-8 p-5 rounded-2xl bg-white/5 border border-white/10">
+          <div className="mb-8 p-5 rounded-2xl bg-[#0d0d1f]/90 border border-[#1e1e3f]">
             <div className="flex justify-between text-sm mb-3">
               <span className="text-gray-400">Check-in Progress</span>
               <span className="text-white font-semibold">
@@ -304,14 +304,14 @@ export default function AdminDashboard() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search by name, roll no, or email..."
-              className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500"
+              className="w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#ff2d78]"
             />
           </div>
           <div className="relative">
             <select
               value={branch}
               onChange={e => setBranch(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 pr-10 text-white focus:outline-none focus:border-purple-500 appearance-none"
+              className="bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl px-4 py-3 pr-10 text-white focus:outline-none focus:border-[#ff2d78] appearance-none"
             >
               <option value="all">All Branches</option>
               {branches.map(b => (
@@ -346,7 +346,7 @@ export default function AdminDashboard() {
                     <tr key={p.id} className="hover:bg-white/[0.02] transition-colors">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-amber-500 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#ff2d78] to-[#7c3aed] flex items-center justify-center text-xs font-bold flex-shrink-0">
                             {p.full_name.charAt(0)}
                           </div>
                           <div>
@@ -462,7 +462,7 @@ export default function AdminDashboard() {
                 <input
                   value={editForm.full_name}
                   onChange={e => setEditForm(prev => (prev ? { ...prev, full_name: e.target.value } : prev))}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-indigo-500"
                 />
               </div>
               <div>
@@ -471,7 +471,7 @@ export default function AdminDashboard() {
                   type="email"
                   value={editForm.email}
                   onChange={e => setEditForm(prev => (prev ? { ...prev, email: e.target.value } : prev))}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-indigo-500"
                 />
               </div>
               <div>
@@ -479,7 +479,7 @@ export default function AdminDashboard() {
                 <input
                   value={editForm.roll_number}
                   onChange={e => setEditForm(prev => (prev ? { ...prev, roll_number: e.target.value } : prev))}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-indigo-500"
                 />
               </div>
               <div>
@@ -487,7 +487,7 @@ export default function AdminDashboard() {
                 <input
                   value={editForm.whatsapp_number}
                   onChange={e => setEditForm(prev => (prev ? { ...prev, whatsapp_number: e.target.value } : prev))}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-indigo-500"
                 />
               </div>
               <div>
@@ -495,7 +495,7 @@ export default function AdminDashboard() {
                 <input
                   value={editForm.branch}
                   onChange={e => setEditForm(prev => (prev ? { ...prev, branch: e.target.value } : prev))}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-indigo-500"
                 />
               </div>
               <div>
@@ -503,7 +503,7 @@ export default function AdminDashboard() {
                 <select
                   value={editForm.year}
                   onChange={e => setEditForm(prev => (prev ? { ...prev, year: e.target.value } : prev))}
-                  className="w-full bg-[#1a1530] border border-white/10 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-[#13132a] border border-[#1e1e3f] rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-indigo-500"
                 >
                   <option value="1st Year">1st Year</option>
                   <option value="2nd Year">2nd Year</option>
@@ -514,7 +514,7 @@ export default function AdminDashboard() {
                 <input
                   value={editForm.payment_id}
                   onChange={e => setEditForm(prev => (prev ? { ...prev, payment_id: e.target.value } : prev))}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-indigo-500"
                 />
               </div>
               <div>
@@ -522,7 +522,7 @@ export default function AdminDashboard() {
                 <input
                   value={editForm.skills}
                   onChange={e => setEditForm(prev => (prev ? { ...prev, skills: e.target.value } : prev))}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-indigo-500"
                 />
               </div>
 
@@ -547,4 +547,5 @@ export default function AdminDashboard() {
     </div>
   );
 }
+
 

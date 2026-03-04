@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   AlertCircle,
@@ -273,21 +273,21 @@ export default function Register() {
     const s = fieldStates[field];
     if (s === 'valid') return 'border-emerald-500 focus:border-emerald-400';
     if (s === 'invalid') return 'border-red-500 focus:border-red-400';
-    return 'border-white/10 focus:border-purple-500';
+    return 'border-white/10 focus:border-[#ff2d78]';
   };
 
   const skillSelected = (skill: string) => form.skills.includes(skill);
 
   if (success) {
     return (
-      <div className="min-h-screen bg-[#0d0a1a] flex items-center justify-center px-4 pt-16">
+      <div className="min-h-screen bg-[#050510] grid-bg flex items-center justify-center px-4 pt-16">
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="max-w-md w-full text-center">
-          <div className="w-20 h-20 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-6">
+          <div className="w-20 h-20 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center mx-auto mb-6">
             <CheckCircle size={40} className="text-emerald-400" />
           </div>
-          <h2 className="text-3xl font-black text-white mb-2">Registration Complete</h2>
+          <h2 className="text-3xl font-display font-black text-white mb-2">Registration Complete</h2>
           <p className="text-gray-400 mb-8">Your registration has been recorded successfully. Confirmation mail has been sent.</p>
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-left space-y-3 mb-8">
+          <div className="bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-2xl p-6 text-left space-y-3 mb-8 gradient-border">
             <div className="flex justify-between gap-3">
               <span className="text-gray-400 text-sm">Name</span>
               <span className="text-white font-medium text-right">{success.full_name}</span>
@@ -312,18 +312,18 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0d0a1a] text-white pt-20 pb-16 px-4">
+    <div className="min-h-screen bg-[#050510] grid-bg text-white pt-20 pb-16 px-4">
       <div className="max-w-xl mx-auto">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <div className="text-center mb-8">
-            <span className="inline-block px-4 py-1.5 rounded-full bg-purple-500/20 text-purple-300 text-sm font-medium mb-4">Ignite'26</span>
-            <h1 className="text-4xl font-black mb-2">Register Now</h1>
+            <span className="inline-block px-4 py-1.5 rounded-full bg-[#ff2d78]/20 border border-[#ff2d78]/40 text-[#ff2d78] text-sm font-medium mb-4">Ignite'26</span>
+            <h1 className="text-4xl font-display font-black mb-2 neon-pink">Register Now</h1>
             <p className="text-gray-400">Step {step} of 2</p>
           </div>
 
           <div className="flex items-center gap-3 mb-6">
-            <div className={`flex-1 h-2 rounded-full ${step >= 1 ? 'bg-purple-500' : 'bg-white/10'}`} />
-            <div className={`flex-1 h-2 rounded-full ${step >= 2 ? 'bg-amber-500' : 'bg-white/10'}`} />
+            <div className={`flex-1 h-2 rounded-full ${step >= 1 ? 'bg-[#ff2d78]' : 'bg-white/10'}`} />
+            <div className={`flex-1 h-2 rounded-full ${step >= 2 ? 'bg-[#00f5ff]' : 'bg-white/10'}`} />
           </div>
 
           {error && (
@@ -359,7 +359,7 @@ export default function Register() {
                         onChange={e => setOtp(e.target.value)}
                         maxLength={6}
                         placeholder="Enter 6-digit OTP"
-                        className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500"
+                        className="flex-1 bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-lg px-3 py-2 text-white placeholder-gray-600 focus:outline-none focus:border-[#ff2d78]"
                       />
                       <button
                         type="button"
@@ -445,7 +445,7 @@ export default function Register() {
                 <button
                   type="button"
                   onClick={handleNext}
-                  className="w-full py-4 rounded-xl bg-gradient-to-r from-purple-600 to-amber-500 text-white font-bold text-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                  className="w-full py-4 rounded-xl bg-gradient-to-r from-[#ff2d78] to-[#7c3aed] text-white font-bold text-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2 glow-box-pink"
                 >
                   Continue to Payment <ArrowRight size={18} />
                 </button>
@@ -454,7 +454,7 @@ export default function Register() {
 
             {step === 2 && (
               <>
-                <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+                <div className="bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-2xl p-5">
                   <div className="flex items-center gap-2 mb-3">
                     <QrCode size={18} className="text-amber-400" />
                     <h3 className="font-semibold text-white">Pay Registration Fee</h3>
@@ -463,7 +463,7 @@ export default function Register() {
                     {form.year ? `Registration fee for ${form.year}: INR ${registrationFee}` : 'Select year in Step 1 to view fee'}
                   </p>
 
-                  <div className="bg-white rounded-xl p-3 w-fit mx-auto mb-4">
+                  <div className="bg-white rounded-xl p-3 w-fit mx-auto mb-4 glow-box-cyan">
                     <img src={qrSrc} alt="UPI Payment QR" className="w-52 h-52 object-contain" />
                   </div>
 
@@ -512,7 +512,7 @@ export default function Register() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="sm:w-1/2 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-amber-500 text-white font-bold hover:opacity-90 transition-opacity disabled:opacity-50"
+                    className="sm:w-1/2 py-3 rounded-xl bg-gradient-to-r from-[#ff2d78] to-[#7c3aed] text-white font-bold hover:opacity-90 transition-opacity disabled:opacity-50 glow-box-pink"
                   >
                     {loading ? 'Registering...' : 'Complete Registration'}
                   </button>
@@ -529,3 +529,4 @@ export default function Register() {
     </div>
   );
 }
+

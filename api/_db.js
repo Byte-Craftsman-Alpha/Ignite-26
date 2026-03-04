@@ -9,6 +9,9 @@ fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 
+const adminEmail = String(process.env.ADMIN_EMAIL || 'admin@ignite26.edu.in').trim().toLowerCase();
+const adminPassword = String(process.env.ADMIN_PASSWORD || 'admin123');
+
 function hashPassword(password) {
   const salt = crypto.randomBytes(16);
   const key = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha256');
@@ -127,10 +130,14 @@ function initSchema() {
   ensureColumn('media', 'uploaded_by', "TEXT NOT NULL DEFAULT 'admin'");
   ensureColumn('management_team', 'profile_image', "TEXT NOT NULL DEFAULT ''");
 
-  const userCount = db.prepare('SELECT COUNT(*) AS c FROM auth_users').get().c;
-  if (userCount === 0) {
+  const adminUser = db.prepare('SELECT id FROM auth_users WHERE email = ? LIMIT 1').get(adminEmail);
+  const adminHash = hashPassword(adminPassword);
+  if (!adminUser) {
     db.prepare('INSERT INTO auth_users (email, password_hash) VALUES (?, ?)')
-      .run('admin@ignite26.edu.in', hashPassword('admin123'));
+      .run(adminEmail, adminHash);
+  } else {
+    db.prepare('UPDATE auth_users SET password_hash = ? WHERE id = ?')
+      .run(adminHash, adminUser.id);
   }
 }
 

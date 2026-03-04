@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Shield, Eye, EyeOff, AlertCircle } from 'lucide-react';
@@ -36,7 +36,7 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0d0a1a] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-[#050510] grid-bg flex items-center justify-center px-4">
       <div className="absolute inset-0">
         <div className="absolute top-1/3 left-1/3 w-96 h-96 bg-purple-700/20 rounded-full blur-3xl" />
         <div className="absolute bottom-1/3 right-1/3 w-80 h-80 bg-amber-600/10 rounded-full blur-3xl" />
@@ -45,7 +45,7 @@ export default function AdminLogin() {
         className="relative w-full max-w-md">
         <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-3xl p-8">
           <div className="text-center mb-8">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-600 to-amber-500 flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#ff2d78] to-[#7c3aed] flex items-center justify-center mx-auto mb-4">
               <Shield size={28} className="text-white" />
             </div>
             <h1 className="text-2xl font-black text-white">Admin Access</h1>
@@ -63,15 +63,15 @@ export default function AdminLogin() {
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1.5">Email</label>
               <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-                placeholder="admin@ignite26.edu.in"
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500" />
+                placeholder="Configured ADMIN_EMAIL"
+                className="w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#ff2d78]" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1.5">Password</label>
               <div className="relative">
                 <input type={showPw ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pr-12 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500" />
+                  placeholder="********"
+                  className="w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl px-4 py-3 pr-12 text-white placeholder-gray-600 focus:outline-none focus:border-[#ff2d78]" />
                 <button type="button" onClick={() => setShowPw(!showPw)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
                   {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -79,16 +79,17 @@ export default function AdminLogin() {
               </div>
             </div>
             <button type="submit" disabled={loading}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-amber-500 text-white font-bold hover:opacity-90 transition-opacity disabled:opacity-50 mt-2">
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-[#ff2d78] to-[#7c3aed] text-white font-bold hover:opacity-90 transition-opacity disabled:opacity-50 mt-2">
               {loading ? 'Signing In...' : 'Sign In to Dashboard'}
             </button>
           </form>
 
           <p className="text-center text-gray-600 text-xs mt-6">
-            Demo: admin@ignite26.edu.in / admin123
+            Authorized admin access only.
           </p>
         </div>
       </motion.div>
     </div>
   );
 }
+

@@ -57,7 +57,7 @@ export default function PublicMediaUpload() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0d0a1a] text-white pt-20 pb-16 px-4">
+    <div className="min-h-screen bg-[#050510] grid-bg text-white pt-20 pb-16 px-4">
       <div className="max-w-2xl mx-auto">
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-8">
           <span className="inline-block px-4 py-1.5 rounded-full bg-purple-500/20 text-purple-300 text-sm font-medium mb-4">Ignite'26 Community</span>
@@ -65,25 +65,25 @@ export default function PublicMediaUpload() {
           <p className="text-gray-400">Share event photos and videos. Submissions are reviewed before publishing.</p>
         </motion.div>
 
-        <form onSubmit={handleSubmit} className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-2xl p-6 space-y-4">
           <div>
             <label className="block text-sm text-gray-300 mb-1.5">Media File *</label>
             <input
               type="file"
               accept="image/*,video/*"
               onChange={e => setFile(e.target.files?.[0] || null)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white file:mr-4 file:rounded-lg file:border-0 file:bg-purple-600/30 file:px-3 file:py-2 file:text-purple-200"
+              className="w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl px-4 py-3 text-white file:mr-4 file:rounded-lg file:border-0 file:bg-purple-600/30 file:px-3 file:py-2 file:text-purple-200"
             />
           </div>
 
           <div>
             <label className="block text-sm text-gray-300 mb-1.5">Caption (optional)</label>
-            <input value={caption} onChange={e => setCaption(e.target.value)} placeholder="Write a short caption" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500" />
+            <input value={caption} onChange={e => setCaption(e.target.value)} placeholder="Write a short caption" className="w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#ff2d78]" />
           </div>
 
           <div>
             <label className="block text-sm text-gray-300 mb-1.5">Category</label>
-            <select value={category} onChange={e => setCategory(e.target.value)} className="w-full bg-[#1a1530] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500">
+            <select value={category} onChange={e => setCategory(e.target.value)} className="w-full bg-[#13132a] border border-[#1e1e3f] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#ff2d78]">
               <option value="general">General</option>
               <option value="winner">Winner</option>
             </select>
@@ -101,7 +101,7 @@ export default function PublicMediaUpload() {
             </div>
           )}
 
-          <button type="submit" disabled={loading} className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-amber-500 text-white font-bold flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50">
+          <button type="submit" disabled={loading} className="w-full py-3 rounded-xl bg-gradient-to-r from-[#ff2d78] to-[#7c3aed] text-white font-bold flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50">
             <UploadCloud size={18} /> {loading ? 'Submitting...' : 'Submit For Review'}
           </button>
         </form>
@@ -109,3 +109,4 @@ export default function PublicMediaUpload() {
     </div>
   );
 }
+

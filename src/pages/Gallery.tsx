@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Image, Filter } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -38,7 +38,7 @@ export default function Gallery() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0d0a1a] text-white pt-20 pb-16">
+    <div className="min-h-screen bg-[#050510] grid-bg text-white pt-20 pb-16">
       <div className="max-w-7xl mx-auto px-4">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-12">
           <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-500/20 text-purple-300 text-sm font-medium mb-4">
@@ -55,7 +55,7 @@ export default function Gallery() {
             <button key={f.value} onClick={() => setFilter(f.value)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 filter === f.value
-                  ? 'bg-purple-600 text-white'
+                  ? 'bg-[#ff2d78] text-white'
                   : 'bg-white/5 text-gray-400 hover:bg-white/10'
               }`}>
               {f.label}
@@ -127,3 +127,4 @@ export default function Gallery() {
     </div>
   );
 }
+

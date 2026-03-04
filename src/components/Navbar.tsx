@@ -42,18 +42,18 @@ export default function Navbar() {
 
   return (
     <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-      scrolled ? 'bg-[#0d0a1a]/95 backdrop-blur-md shadow-lg shadow-purple-900/20' : 'bg-transparent'
+      scrolled ? 'bg-[#050510]/92 backdrop-blur-md border-b border-[#1e1e3f] shadow-lg shadow-[#ff2d78]/10' : 'bg-transparent'
     }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-amber-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#ff2d78] to-[#7c3aed] flex items-center justify-center glow-box-pink">
               <Crown size={16} className="text-white" />
             </div>
-            <span className="font-bold text-xl tracking-tight">
+            <span className="font-display font-bold text-xl tracking-tight">
               <span className="text-white">Ignite</span>
-              <span className="text-amber-400">'26</span>
-              <span className="text-purple-400 text-sm ml-1">2026</span>
+              <span className="text-[#ff2d78] neon-pink">'26</span>
+              <span className="text-[#00f5ff] text-sm ml-1">2026</span>
             </span>
           </Link>
 
@@ -62,8 +62,8 @@ export default function Navbar() {
               <Link key={l.to} to={l.to}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                   isActive(l.to)
-                    ? 'bg-purple-600/30 text-purple-300'
-                    : 'text-gray-300 hover:text-white hover:bg-white/5'
+                    ? 'bg-[#ff2d78]/20 text-[#ff2d78] border border-[#ff2d78]/40'
+                    : 'text-gray-300 hover:text-[#00f5ff] hover:bg-[#00f5ff]/10'
                 }`}>
                 {l.label}
               </Link>
@@ -71,7 +71,7 @@ export default function Navbar() {
             {isAdmin ? (
               <>
                 <Link to="/admin" className={`px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1 ${
-                  location.pathname.startsWith('/admin') ? 'bg-amber-500/20 text-amber-400' : 'text-amber-400 hover:bg-amber-500/10'
+                  location.pathname.startsWith('/admin') ? 'bg-[#ffd700]/20 text-[#ffd700]' : 'text-[#ffd700] hover:bg-[#ffd700]/10'
                 }`}>
                   <Shield size={14} /> Admin
                 </Link>
@@ -80,7 +80,7 @@ export default function Navbar() {
                 </button>
               </>
             ) : (
-              <Link to="/admin/login" className="ml-2 px-4 py-1.5 rounded-lg text-sm font-semibold bg-gradient-to-r from-purple-600 to-amber-500 text-white hover:opacity-90 transition-opacity">
+              <Link to="/admin/login" className="ml-2 px-4 py-1.5 rounded-lg text-sm font-semibold bg-gradient-to-r from-[#ff2d78] to-[#7c3aed] text-white hover:opacity-90 transition-opacity glow-box-pink">
                 Admin
               </Link>
             )}
@@ -93,12 +93,12 @@ export default function Navbar() {
       </div>
 
       {open && (
-        <div className="md:hidden bg-[#0d0a1a]/98 backdrop-blur-md border-t border-purple-900/30">
+        <div className="md:hidden bg-[#050510]/98 backdrop-blur-md border-t border-[#1e1e3f]">
           <div className="px-4 py-3 space-y-1">
             {links.map(l => (
               <Link key={l.to} to={l.to} onClick={() => setOpen(false)}
                 className={`block px-3 py-2 rounded-lg text-sm font-medium ${
-                  isActive(l.to) ? 'bg-purple-600/30 text-purple-300' : 'text-gray-300'
+                  isActive(l.to) ? 'bg-[#ff2d78]/20 text-[#ff2d78]' : 'text-gray-300'
                 }`}>
                 {l.label}
               </Link>
@@ -109,7 +109,7 @@ export default function Navbar() {
                 <button onClick={handleSignout} className="block w-full text-left px-3 py-2 text-red-400 text-sm">Sign Out</button>
               </>
             ) : (
-              <Link to="/admin/login" onClick={() => setOpen(false)} className="block px-3 py-2 text-purple-400 text-sm">Admin Login</Link>
+              <Link to="/admin/login" onClick={() => setOpen(false)} className="block px-3 py-2 text-[#ff2d78] text-sm">Admin Login</Link>
             )}
           </div>
         </div>

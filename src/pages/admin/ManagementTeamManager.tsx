@@ -216,7 +216,7 @@ export default function ManagementTeamAdmin() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0d0a1a] text-white pt-20 pb-16">
+    <div className="min-h-screen bg-[#050510] grid-bg text-white pt-20 pb-16">
       <div className="max-w-6xl mx-auto px-4">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
@@ -234,7 +234,7 @@ export default function ManagementTeamAdmin() {
         </div>
 
         {showForm && (
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-8">
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-2xl p-6 mb-8">
             <div className="flex items-center justify-between mb-5">
               <h2 className="font-bold text-lg flex items-center gap-2">
                 <ShieldCheck size={18} className="text-indigo-400" />
@@ -274,11 +274,11 @@ export default function ManagementTeamAdmin() {
 
               <div>
                 <label className="block text-sm text-gray-400 mb-1.5">Name *</label>
-                <input value={form.name} onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500" />
+                <input value={form.name} onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))} className="w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500" />
               </div>
               <div>
                 <label className="block text-sm text-gray-400 mb-1.5">Branch *</label>
-                <select value={form.branch} onChange={e => setForm(prev => ({ ...prev, branch: e.target.value }))} className="w-full bg-[#1a1530] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500">
+                <select value={form.branch} onChange={e => setForm(prev => ({ ...prev, branch: e.target.value }))} className="w-full bg-[#13132a] border border-[#1e1e3f] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500">
                   {BRANCHES.map(b => (
                     <option key={b} value={b}>{b}</option>
                   ))}
@@ -286,7 +286,7 @@ export default function ManagementTeamAdmin() {
               </div>
               <div>
                 <label className="block text-sm text-gray-400 mb-1.5">Year *</label>
-                <select value={form.year} onChange={e => setForm(prev => ({ ...prev, year: e.target.value }))} className="w-full bg-[#1a1530] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500">
+                <select value={form.year} onChange={e => setForm(prev => ({ ...prev, year: e.target.value }))} className="w-full bg-[#13132a] border border-[#1e1e3f] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500">
                   {YEARS.map(y => (
                     <option key={y} value={y}>{y}</option>
                   ))}
@@ -294,15 +294,15 @@ export default function ManagementTeamAdmin() {
               </div>
               <div>
                 <label className="block text-sm text-gray-400 mb-1.5">WhatsApp Number *</label>
-                <input value={form.whatsapp_number} maxLength={10} onChange={e => setForm(prev => ({ ...prev, whatsapp_number: e.target.value }))} placeholder="10 digit number" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500" />
+                <input value={form.whatsapp_number} maxLength={10} onChange={e => setForm(prev => ({ ...prev, whatsapp_number: e.target.value }))} placeholder="10 digit number" className="w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500" />
               </div>
               <div>
                 <label className="block text-sm text-gray-400 mb-1.5">Roles * (comma-separated)</label>
-                <input value={form.roles} onChange={e => setForm(prev => ({ ...prev, roles: e.target.value }))} placeholder="Lead Coordinator, Sponsorship" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500" />
+                <input value={form.roles} onChange={e => setForm(prev => ({ ...prev, roles: e.target.value }))} placeholder="Lead Coordinator, Sponsorship" className="w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500" />
               </div>
               <div>
                 <label className="block text-sm text-gray-400 mb-1.5">Fields Dealt *</label>
-                <input value={form.fields} onChange={e => setForm(prev => ({ ...prev, fields: e.target.value }))} placeholder="Registrations, Stage ops, Hospitality" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500" />
+                <input value={form.fields} onChange={e => setForm(prev => ({ ...prev, fields: e.target.value }))} placeholder="Registrations, Stage ops, Hospitality" className="w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500" />
               </div>
 
               {error && <p className="md:col-span-2 text-red-400 text-sm">{error}</p>}
@@ -365,3 +365,4 @@ export default function ManagementTeamAdmin() {
     </div>
   );
 }
+
