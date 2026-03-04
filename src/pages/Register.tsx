@@ -78,6 +78,12 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<FormData & { id?: number } | null>(null);
   const [error, setError] = useState('');
+  const [otp, setOtp] = useState('');
+  const [otpToken, setOtpToken] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpMessage, setOtpMessage] = useState('');
   const registrationFee = YEAR_FEES[form.year] ?? 0;
 
   const upiLink = useMemo(() => {
@@ -100,7 +106,79 @@ export default function Register() {
     const { name, value } = e.target;
     setForm(f => ({ ...f, [name]: value }));
     setFieldStates(s => ({ ...s, [name]: validateField(name, value) }));
+    if (name === 'email') {
+      setOtp('');
+      setOtpToken('');
+      setOtpSent(false);
+      setOtpVerified(false);
+      setOtpMessage('');
+    }
     setError('');
+  };
+
+  const handleSendOtp = async () => {
+    if (validateField('email', form.email) !== 'valid') {
+      setError('Enter a valid email before requesting OTP.');
+      return;
+    }
+
+    setOtpLoading(true);
+    setError('');
+    setOtpMessage('');
+
+    try {
+      const res = await fetch('/api/email-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'send', email: form.email }),
+      });
+      const data = await readJsonSafe<{ error?: string }>(res);
+      if (!res.ok) throw new Error(getErrorMessage(data, 'Failed to send OTP'));
+
+      setOtpSent(true);
+      setOtpVerified(false);
+      setOtpToken('');
+      setOtpMessage('OTP sent. Check Inbox, Spam and Promotions folders.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to send OTP');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otpSent) {
+      setError('Please request OTP first.');
+      return;
+    }
+    if (!/^\d{6}$/.test(otp.trim())) {
+      setError('Enter valid 6-digit OTP.');
+      return;
+    }
+
+    setOtpLoading(true);
+    setError('');
+    setOtpMessage('');
+    try {
+      const res = await fetch('/api/email-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'verify', email: form.email, otp: otp.trim() }),
+      });
+      const data = await readJsonSafe<{ error?: string; otp_token?: string }>(res);
+      if (!res.ok) throw new Error(getErrorMessage(data, 'OTP verification failed'));
+      if (!data?.otp_token) throw new Error('OTP verification token missing');
+
+      setOtpVerified(true);
+      setOtpToken(data.otp_token);
+      setOtpMessage('Email verified successfully.');
+    } catch (err: unknown) {
+      setOtpVerified(false);
+      setOtpToken('');
+      setError(err instanceof Error ? err.message : 'OTP verification failed');
+    } finally {
+      setOtpLoading(false);
+    }
   };
 
   const toggleSkill = (skill: string) => {
@@ -125,7 +203,12 @@ export default function Register() {
 
     setFieldStates(prev => ({ ...prev, ...states }));
 
-    if (!valid) setError('Please complete all basic details before continuing.');
+    if (valid && !otpVerified) {
+      valid = false;
+      setError('Email OTP verification is mandatory before continuing.');
+    } else if (!valid) {
+      setError('Please complete all basic details before continuing.');
+    }
     return valid;
   };
 
@@ -173,7 +256,7 @@ export default function Register() {
       const res = await fetch('/api/participants', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, otp_token: otpToken }),
       });
       const data = await readJsonSafe<{ id?: number; error?: string }>(res);
       if (!res.ok) throw new Error(getErrorMessage(data, 'Registration failed'));
@@ -203,7 +286,7 @@ export default function Register() {
             <CheckCircle size={40} className="text-emerald-400" />
           </div>
           <h2 className="text-3xl font-black text-white mb-2">Registration Complete</h2>
-          <p className="text-gray-400 mb-8">Your registration has been recorded successfully.</p>
+          <p className="text-gray-400 mb-8">Your registration has been recorded successfully. Confirmation mail has been sent.</p>
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-left space-y-3 mb-8">
             <div className="flex justify-between gap-3">
               <span className="text-gray-400 text-sm">Name</span>
@@ -222,7 +305,7 @@ export default function Register() {
               <span className="text-white font-medium text-right">{success.year}</span>
             </div>
           </div>
-          <p className="text-purple-300 text-sm">Save your roll number and WhatsApp number to access your profile later.</p>
+          <p className="text-purple-300 text-sm">Save your roll number and WhatsApp number to access your profile later. If email is not in Inbox, check Spam/Promotions.</p>
         </motion.div>
       </div>
     );
@@ -260,6 +343,37 @@ export default function Register() {
                     <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="yourname@example.com"
                       className={`w-full bg-white/5 border rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-600 focus:outline-none transition-colors ${borderClass('email')}`} />
                   </div>
+                  <p className="text-xs text-gray-500 mt-1">OTP and confirmation mails may arrive in Spam or Promotions folders.</p>
+                  <div className="mt-2 flex flex-col sm:flex-row gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSendOtp}
+                      disabled={otpLoading || validateField('email', form.email) !== 'valid'}
+                      className="sm:w-40 px-4 py-2 rounded-lg bg-purple-600/20 border border-purple-500/30 text-purple-300 text-sm hover:bg-purple-600/30 disabled:opacity-50"
+                    >
+                      {otpLoading ? 'Sending...' : otpSent ? 'Resend OTP' : 'Send OTP'}
+                    </button>
+                    <div className="flex-1 flex gap-2">
+                      <input
+                        value={otp}
+                        onChange={e => setOtp(e.target.value)}
+                        maxLength={6}
+                        placeholder="Enter 6-digit OTP"
+                        className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleVerifyOtp}
+                        disabled={otpLoading || !otpSent}
+                        className="px-4 py-2 rounded-lg bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-sm hover:bg-emerald-500/30 disabled:opacity-50"
+                      >
+                        {otpLoading ? '...' : otpVerified ? 'Verified' : 'Verify'}
+                      </button>
+                    </div>
+                  </div>
+                  {otpMessage && (
+                    <p className={`text-xs mt-1 ${otpVerified ? 'text-emerald-400' : 'text-amber-300'}`}>{otpMessage}</p>
+                  )}
                 </div>
 
                 <div>

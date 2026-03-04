@@ -1,3 +1,4 @@
+﻿import 'dotenv/config';
 import express from 'express';
 
 import participants from './participants.js';
@@ -9,6 +10,7 @@ import media from './media.js';
 import winners from './winners.js';
 import activities from './activities.js';
 import managementTeam from './management-team.js';
+import emailOtp from './email-otp.js';
 import login from './auth/login.js';
 import me from './auth/me.js';
 import signout from './auth/signout.js';
@@ -28,6 +30,7 @@ app.all('/api/media', (req, res) => media(req, res));
 app.all('/api/winners', (req, res) => winners(req, res));
 app.all('/api/activities', (req, res) => activities(req, res));
 app.all('/api/management-team', (req, res) => managementTeam(req, res));
+app.all('/api/email-otp', (req, res) => emailOtp(req, res));
 app.all('/api/auth/login', (req, res) => login(req, res));
 app.all('/api/auth/me', (req, res) => me(req, res));
 app.all('/api/auth/signout', (req, res) => signout(req, res));

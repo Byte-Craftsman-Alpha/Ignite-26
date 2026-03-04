@@ -1,6 +1,7 @@
 import db, { encodeSkills, toParticipant } from './_db.js';
 import { requireAdmin } from './_auth.js';
 import { writeActivity } from './_activity.js';
+import { sendRegistrationConfirmationEmail } from './_mailer.js';
 
 const ALLOWED_YEARS = ['1st Year', '2nd Year'];
 
@@ -60,7 +61,27 @@ export default async function handler(req, res) {
       const validationError = validateParticipantInput(req.body || {});
       if (validationError) return res.status(400).json({ error: validationError });
 
-      const { email, full_name, roll_number, branch, year, skills, payment_id, whatsapp_number } = req.body;
+      const { email, full_name, roll_number, branch, year, skills, payment_id, whatsapp_number, otp_token } = req.body;
+
+      if (!otp_token) {
+        return res.status(403).json({ error: 'Email OTP verification is required before registration' });
+      }
+
+      const verifiedOtp = db
+        .prepare(
+          `
+            SELECT id
+            FROM email_otp_sessions
+            WHERE email = ? AND verification_token = ? AND verified = 1 AND consumed = 0 AND expires_at > ?
+            ORDER BY id DESC
+            LIMIT 1
+          `
+        )
+        .get(String(email).trim().toLowerCase(), otp_token, new Date().toISOString());
+
+      if (!verifiedOtp) {
+        return res.status(403).json({ error: 'Invalid or expired OTP verification. Please verify your email again.' });
+      }
 
       if (checkDuplicate('roll_number', roll_number)) {
         return res.status(409).json({ error: 'This roll number is already registered' });
@@ -99,6 +120,14 @@ export default async function handler(req, res) {
           year: participant.year,
         },
       });
+
+      db.prepare('UPDATE email_otp_sessions SET consumed = 1 WHERE id = ?').run(verifiedOtp.id);
+
+      try {
+        await sendRegistrationConfirmationEmail(participant);
+      } catch (mailErr) {
+        console.error('Confirmation mail error:', mailErr);
+      }
 
       return res.status(201).json(participant);
     }
