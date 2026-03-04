@@ -122,6 +122,19 @@ function initSchema() {
       consumed INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS participant_share_access (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      token TEXT NOT NULL DEFAULT '',
+      enabled INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS registration_control (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      enabled INTEGER NOT NULL DEFAULT 1,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
 
   ensureColumn('participants', 'payment_verified', "INTEGER NOT NULL DEFAULT 0");
@@ -129,6 +142,18 @@ function initSchema() {
   ensureColumn('media', 'status', "TEXT NOT NULL DEFAULT 'approved'");
   ensureColumn('media', 'uploaded_by', "TEXT NOT NULL DEFAULT 'admin'");
   ensureColumn('management_team', 'profile_image', "TEXT NOT NULL DEFAULT ''");
+
+  const shareAccess = db.prepare('SELECT id FROM participant_share_access WHERE id = 1').get();
+  if (!shareAccess) {
+    db.prepare('INSERT INTO participant_share_access (id, token, enabled, updated_at) VALUES (1, ?, 0, ?)')
+      .run(crypto.randomBytes(24).toString('hex'), new Date().toISOString());
+  }
+
+  const registrationControl = db.prepare('SELECT id FROM registration_control WHERE id = 1').get();
+  if (!registrationControl) {
+    db.prepare('INSERT INTO registration_control (id, enabled, updated_at) VALUES (1, 1, ?)')
+      .run(new Date().toISOString());
+  }
 
   const adminUser = db.prepare('SELECT id FROM auth_users WHERE email = ? LIMIT 1').get(adminEmail);
   const adminHash = hashPassword(adminPassword);

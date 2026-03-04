@@ -1,6 +1,6 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Image, Filter } from 'lucide-react';
+import { X, Image, Filter, Download, Share2 } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { readJsonSafe } from '../lib/http';
 
@@ -19,6 +19,7 @@ export default function Gallery() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [lightbox, setLightbox] = useState<MediaItem | null>(null);
+  const [actionMessage, setActionMessage] = useState('');
 
   const fetchMedia = async () => {
     try {
@@ -30,6 +31,42 @@ export default function Gallery() {
   };
 
   useEffect(() => { setLoading(true); fetchMedia(); }, [filter]);
+
+  const clearActionMessage = () => {
+    window.setTimeout(() => setActionMessage(''), 1800);
+  };
+
+  const handleDownload = () => {
+    if (!lightbox) return;
+    const extension = lightbox.type === 'video' ? 'mp4' : 'jpg';
+    const a = document.createElement('a');
+    a.href = lightbox.url;
+    a.download = `ignite26-media-${lightbox.id}.${extension}`;
+    a.target = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
+  const handleShare = async () => {
+    if (!lightbox) return;
+    const title = lightbox.caption || 'Ignite 26 Gallery Media';
+    const text = lightbox.caption || 'Check out this media from Ignite 26 Gallery';
+    const link = lightbox.url.startsWith('http') ? lightbox.url : `${window.location.origin}${lightbox.url}`;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ title, text, url: link });
+        return;
+      }
+      await navigator.clipboard.writeText(link);
+      setActionMessage('Media link copied.');
+      clearActionMessage();
+    } catch {
+      setActionMessage('Unable to share right now.');
+      clearActionMessage();
+    }
+  };
 
   const filters = [
     { value: 'all', label: 'All Media' },
@@ -48,7 +85,6 @@ export default function Gallery() {
           <p className="text-gray-400">Relive the magic of Ignite'26</p>
         </motion.div>
 
-        {/* Filters */}
         <div className="flex items-center justify-center gap-3 mb-10">
           <Filter size={16} className="text-gray-500" />
           {filters.map(f => (
@@ -98,7 +134,6 @@ export default function Gallery() {
         )}
       </div>
 
-      {/* Lightbox */}
       <AnimatePresence>
         {lightbox && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -111,10 +146,34 @@ export default function Gallery() {
               ) : (
                 <img src={lightbox.url} alt={lightbox.caption} className="max-h-[80vh] rounded-2xl object-contain" />
               )}
-              <button onClick={() => setLightbox(null)}
-                className="absolute top-3 right-3 w-9 h-9 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70">
-                <X size={18} />
-              </button>
+              <div className="absolute top-3 right-3 flex items-center gap-2">
+                <button
+                  onClick={handleDownload}
+                  className="w-9 h-9 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70"
+                  title="Download media"
+                >
+                  <Download size={16} />
+                </button>
+                <button
+                  onClick={handleShare}
+                  className="w-9 h-9 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70"
+                  title="Share media"
+                >
+                  <Share2 size={16} />
+                </button>
+                <button
+                  onClick={() => setLightbox(null)}
+                  className="w-9 h-9 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70"
+                  title="Close"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              {actionMessage && (
+                <div className="absolute top-3 left-3 px-3 py-1.5 rounded-lg bg-black/65 text-white text-xs">
+                  {actionMessage}
+                </div>
+              )}
               {lightbox.caption && (
                 <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 rounded-b-2xl">
                   <p className="text-white font-medium">{lightbox.caption}</p>

@@ -22,6 +22,11 @@ function randomOtp() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
+function registrationsEnabled() {
+  const row = db.prepare('SELECT enabled FROM registration_control WHERE id = 1').get();
+  return !row || Boolean(row.enabled);
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -38,6 +43,10 @@ export default async function handler(req, res) {
     }
 
     if (action === 'send') {
+      if (!registrationsEnabled()) {
+        return res.status(403).json({ error: 'Registrations are currently closed by admin.' });
+      }
+
       const recent = db
         .prepare("SELECT created_at FROM email_otp_sessions WHERE email = ? ORDER BY id DESC LIMIT 1")
         .get(normalizedEmail);
@@ -65,6 +74,10 @@ export default async function handler(req, res) {
     }
 
     if (action === 'verify') {
+      if (!registrationsEnabled()) {
+        return res.status(403).json({ error: 'Registrations are currently closed by admin.' });
+      }
+
       const providedOtp = String(otp || '').trim();
       if (!/^\d{6}$/.test(providedOtp)) {
         return res.status(400).json({ error: 'OTP must be 6 digits' });

@@ -106,7 +106,7 @@ export default function Home() {
           </motion.h1>
 
           <motion.p variants={fadeUp} className="text-lg sm:text-xl text-gray-300 max-w-3xl mx-auto mb-9">
-            The annual campus celebration of talent, style and unforgettable moments. Music, motion, crowns, and a full-day social vibe.
+            The unified campus celebration of talent, style, interaction, fresh energy and unforgettable moments. Music, motion, crowns, and a full-day social vibe.
           </motion.p>
 
           <motion.div variants={fadeUp} className="mb-10">

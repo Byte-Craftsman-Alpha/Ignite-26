@@ -33,6 +33,7 @@ export default function MediaUpload() {
   const [error, setError] = useState('');
   const [deleting, setDeleting] = useState<number | null>(null);
   const [moderating, setModerating] = useState<number | null>(null);
+  const [pendingCategoryDrafts, setPendingCategoryDrafts] = useState<Record<number, string>>({});
 
   const fetchMedia = async () => {
     try {
@@ -42,8 +43,11 @@ export default function MediaUpload() {
       ]);
       const approvedData = await readJsonSafe<MediaItem[]>(approvedRes);
       const pendingData = await readJsonSafe<MediaItem[]>(pendingRes);
-      setApprovedMedia(Array.isArray(approvedData) ? approvedData : []);
-      setPendingMedia(Array.isArray(pendingData) ? pendingData : []);
+      const nextApproved = Array.isArray(approvedData) ? approvedData : [];
+      const nextPending = Array.isArray(pendingData) ? pendingData : [];
+      setApprovedMedia(nextApproved);
+      setPendingMedia(nextPending);
+      setPendingCategoryDrafts(Object.fromEntries(nextPending.map(item => [item.id, item.category || 'general'])));
     } catch (err) {
       console.error(err);
     } finally {
@@ -124,10 +128,15 @@ export default function MediaUpload() {
   const handleModerate = async (id: number, status: 'approved' | 'rejected') => {
     setModerating(id);
     try {
+      const payload: Record<string, unknown> = { id, status };
+      if (status === 'approved') {
+        payload.category = pendingCategoryDrafts[id] || 'general';
+      }
+
       await fetch('/api/media', {
         method: 'PUT',
         headers: authHeaders(),
-        body: JSON.stringify({ id, status }),
+        body: JSON.stringify(payload),
       });
       fetchMedia();
     } catch (err) {
@@ -239,6 +248,17 @@ export default function MediaUpload() {
                       <div className="p-3">
                         <p className="text-xs text-gray-400 mb-2">By: {item.uploaded_by}</p>
                         {item.caption && <p className="text-sm text-white mb-2 line-clamp-2">{item.caption}</p>}
+                        <div className="mb-2">
+                          <label className="block text-[11px] text-gray-500 mb-1">Category on approval</label>
+                          <select
+                            value={pendingCategoryDrafts[item.id] || item.category || 'general'}
+                            onChange={e => setPendingCategoryDrafts(prev => ({ ...prev, [item.id]: e.target.value }))}
+                            className="w-full bg-[#13132a] border border-[#1e1e3f] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                          >
+                            <option value="general">General</option>
+                            <option value="winner">Winner</option>
+                          </select>
+                        </div>
                         <div className="flex gap-2">
                           <button onClick={() => handleModerate(item.id, 'approved')} disabled={moderating === item.id} className="flex-1 px-3 py-2 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold flex items-center justify-center gap-1">
                             <Check size={13} /> Approve

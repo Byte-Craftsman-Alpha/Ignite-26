@@ -7,6 +7,7 @@ import HallOfFame from './pages/HallOfFame';
 import MyProfile from './pages/MyProfile';
 import ManagementTeam from './pages/ManagementTeam';
 import PublicMediaUpload from './pages/PublicMediaUpload';
+import PublicRegistrationsView from './pages/PublicRegistrationsView';
 import AdminLogin from './pages/admin/Login';
 import AdminDashboard from './pages/admin/Dashboard';
 import MediaUpload from './pages/admin/MediaUpload';
@@ -28,6 +29,7 @@ export default function App() {
         <Route path="/hall-of-fame" element={<HallOfFame />} />
         <Route path="/management-team" element={<ManagementTeam />} />
         <Route path="/upload-media" element={<PublicMediaUpload />} />
+        <Route path="/records/:token" element={<PublicRegistrationsView />} />
         <Route path="/my-profile" element={<MyProfile />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<AdminGuard><AdminDashboard /></AdminGuard>} />

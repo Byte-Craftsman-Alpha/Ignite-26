@@ -58,6 +58,11 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'POST') {
+      const registrationControl = db.prepare('SELECT enabled FROM registration_control WHERE id = 1').get();
+      if (registrationControl && !registrationControl.enabled) {
+        return res.status(403).json({ error: 'Registrations are currently closed by admin.' });
+      }
+
       const validationError = validateParticipantInput(req.body || {});
       if (validationError) return res.status(400).json({ error: validationError });
 

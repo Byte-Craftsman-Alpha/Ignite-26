@@ -5,7 +5,6 @@ import {
   Users,
   UserCheck,
   Search,
-  CheckCircle,
   XCircle,
   Upload,
   Trophy,
@@ -17,6 +16,9 @@ import {
   X,
   Download,
   FileUp,
+  Copy,
+  Link2,
+  Power,
 } from 'lucide-react';
 import { authHeaders } from '../../lib/auth';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -44,6 +46,19 @@ interface Stats {
   notCheckedIn: number;
   branchCounts: Record<string, number>;
   yearCounts: Record<string, number>;
+}
+
+interface ShareAccess {
+  enabled: boolean;
+  token: string;
+  share_path: string;
+  share_url: string;
+  updated_at: string | null;
+}
+
+interface RegistrationControl {
+  enabled: boolean;
+  updated_at: string | null;
 }
 
 interface ParticipantForm {
@@ -95,6 +110,11 @@ export default function AdminDashboard() {
   const [transferLoading, setTransferLoading] = useState<'csv' | 'xlsx' | 'import' | null>(null);
   const [transferMessage, setTransferMessage] = useState('');
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [shareAccess, setShareAccess] = useState<ShareAccess | null>(null);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareMessage, setShareMessage] = useState('');
+  const [registrationControl, setRegistrationControl] = useState<RegistrationControl | null>(null);
+  const [registrationToggleLoading, setRegistrationToggleLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const fetchData = useCallback(async () => {
@@ -120,7 +140,31 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     fetchData();
+    fetchShareAccess();
+    fetchRegistrationControl();
   }, [fetchData]);
+
+  const fetchShareAccess = useCallback(async () => {
+    try {
+      const res = await fetch('/api/participants-share', { headers: authHeaders() });
+      const data = await readJsonSafe<ShareAccess & { error?: string }>(res);
+      if (!res.ok) throw new Error(getErrorMessage(data, 'Failed to load share access'));
+      setShareAccess(data);
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
+
+  const fetchRegistrationControl = useCallback(async () => {
+    try {
+      const res = await fetch('/api/registration-control', { headers: authHeaders() });
+      const data = await readJsonSafe<RegistrationControl & { error?: string }>(res);
+      if (!res.ok) throw new Error(getErrorMessage(data, 'Failed to load registration control'));
+      setRegistrationControl(data);
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
 
   const handleCheckIn = async (id: number, currentStatus: boolean) => {
     setCheckingIn(id);
@@ -301,6 +345,66 @@ export default function AdminDashboard() {
     }
   };
 
+  const buildShareLink = () => {
+    if (!shareAccess?.token) return '';
+    if (shareAccess.share_url) return shareAccess.share_url;
+    return `${window.location.origin}/records/${shareAccess.token}`;
+  };
+
+  const handleShareAccessUpdate = async (payload: { enabled?: boolean; regenerate?: boolean }, successMessage: string) => {
+    setShareLoading(true);
+    setShareMessage('');
+    try {
+      const res = await fetch('/api/participants-share', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify(payload),
+      });
+      const data = await readJsonSafe<ShareAccess & { error?: string }>(res);
+      if (!res.ok) throw new Error(getErrorMessage(data, 'Failed to update shared access'));
+      setShareAccess(data);
+      setShareMessage(successMessage);
+    } catch (err) {
+      setShareMessage(err instanceof Error ? err.message : 'Failed to update shared access');
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
+  const handleCopyShareLink = async () => {
+    const link = buildShareLink();
+    if (!link) {
+      setShareMessage('Share link is not available yet.');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(link);
+      setShareMessage('Private share link copied.');
+    } catch {
+      setShareMessage(link);
+    }
+  };
+
+  const toggleRegistrations = async () => {
+    if (!registrationControl) return;
+    setRegistrationToggleLoading(true);
+    try {
+      const nextEnabled = !registrationControl.enabled;
+      const res = await fetch('/api/registration-control', {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify({ enabled: nextEnabled }),
+      });
+      const data = await readJsonSafe<RegistrationControl & { error?: string }>(res);
+      if (!res.ok) throw new Error(getErrorMessage(data, 'Failed to update registration status'));
+      setRegistrationControl(data);
+    } catch (err) {
+      setTransferMessage(err instanceof Error ? err.message : 'Failed to update registration status');
+    } finally {
+      setRegistrationToggleLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#050510] grid-bg text-white pt-20 pb-16">
       <div className="max-w-7xl mx-auto px-4">
@@ -368,6 +472,46 @@ export default function AdminDashboard() {
         />
         {transferMessage && <p className="mb-5 text-sm text-gray-300">{transferMessage}</p>}
 
+        <div className="mb-8 p-5 rounded-2xl bg-[#0d0d1f]/90 border border-[#1e1e3f]">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <p className="text-white font-semibold flex items-center gap-2"><Link2 size={16} className="text-cyan-300" /> Shared View Access</p>
+              <p className="text-sm text-gray-400 mt-1">Hidden by default. Only users with the private tokenized link can view registrations when enabled.</p>
+              {shareAccess?.token && (
+                <p className="text-xs text-gray-500 mt-2">Token: <span className="font-mono">{shareAccess.token.slice(0, 10)}...</span></p>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => handleShareAccessUpdate({ enabled: !shareAccess?.enabled }, shareAccess?.enabled ? 'Shared access disabled.' : 'Shared access enabled.')}
+                disabled={shareLoading}
+                className={`px-4 py-2 rounded-xl border text-sm font-medium transition-colors disabled:opacity-50 ${
+                  shareAccess?.enabled
+                    ? 'border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/20'
+                    : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
+                }`}
+              >
+                {shareLoading ? 'Updating...' : shareAccess?.enabled ? 'Disable Access' : 'Enable Access'}
+              </button>
+              <button
+                onClick={() => handleShareAccessUpdate({ regenerate: true }, 'Share link regenerated. Old link is now revoked.')}
+                disabled={shareLoading}
+                className="px-4 py-2 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-300 text-sm font-medium hover:bg-amber-500/20 transition-colors disabled:opacity-50"
+              >
+                Regenerate Link
+              </button>
+              <button
+                onClick={handleCopyShareLink}
+                disabled={shareLoading || !shareAccess?.enabled}
+                className="px-4 py-2 rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-300 text-sm font-medium hover:bg-cyan-500/20 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                <Copy size={14} /> Copy Link
+              </button>
+            </div>
+          </div>
+          {shareMessage && <p className="text-sm text-gray-300 mt-3">{shareMessage}</p>}
+        </div>
+
         {stats && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-5 rounded-2xl bg-[#0d0d1f]/90 border border-[#1e1e3f]">
@@ -403,11 +547,24 @@ export default function AdminDashboard() {
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="p-5 rounded-2xl bg-[#0d0d1f]/90 border border-[#1e1e3f]">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-9 h-9 rounded-lg bg-amber-500/20 flex items-center justify-center">
-                  <CheckCircle size={18} className="text-amber-400" />
+                  <Power size={18} className={registrationControl?.enabled ? 'text-emerald-300' : 'text-red-300'} />
                 </div>
-                <span className="text-gray-400 text-sm">Arrival Rate</span>
+                <span className="text-gray-400 text-sm">Registrations</span>
               </div>
-              <p className="text-3xl font-black text-amber-400">{checkinPct}%</p>
+              <p className={`text-xl font-black ${registrationControl?.enabled ? 'text-emerald-300' : 'text-red-300'}`}>
+                {registrationControl?.enabled ? 'Open' : 'Closed'}
+              </p>
+              <button
+                onClick={toggleRegistrations}
+                disabled={registrationToggleLoading}
+                className={`mt-3 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors disabled:opacity-50 ${
+                  registrationControl?.enabled
+                    ? 'bg-red-500/10 border-red-500/30 text-red-300 hover:bg-red-500/20'
+                    : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20'
+                }`}
+              >
+                {registrationToggleLoading ? 'Updating...' : registrationControl?.enabled ? 'Disable' : 'Enable'}
+              </button>
             </motion.div>
           </div>
         )}

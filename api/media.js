@@ -244,7 +244,7 @@ export default async function handler(req, res) {
       const admin = requireAdmin(req, res);
       if (!admin) return;
 
-      const { id, status } = req.body || {};
+      const { id, status, category } = req.body || {};
       if (!id) return res.status(400).json({ error: 'Media ID required' });
       if (!ALLOWED_STATUSES.has(String(status))) {
         return res.status(400).json({ error: 'Invalid status' });
@@ -253,7 +253,8 @@ export default async function handler(req, res) {
       const existing = db.prepare('SELECT * FROM media WHERE id = ?').get(id);
       if (!existing) return res.status(404).json({ error: 'Media not found' });
 
-      db.prepare('UPDATE media SET status = ? WHERE id = ?').run(status, id);
+      const nextCategory = String(category || existing.category).trim() || existing.category;
+      db.prepare('UPDATE media SET status = ?, category = ? WHERE id = ?').run(status, nextCategory, id);
       const updated = db.prepare('SELECT * FROM media WHERE id = ?').get(id);
 
       writeActivity({
@@ -264,6 +265,7 @@ export default async function handler(req, res) {
         details: {
           previous_status: existing.status,
           new_status: updated.status,
+          previous_category: existing.category,
           category: updated.category,
           type: updated.type,
         },
@@ -308,4 +310,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: err.message });
   }
 }
-

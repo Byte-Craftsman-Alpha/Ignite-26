@@ -1,19 +1,69 @@
-﻿export default function SiteFooter() {
+export default function SiteFooter() {
+  const whatsappLink = String(import.meta.env.VITE_EVENT_WHATSAPP_URL || '').trim();
+  const instagramLink = String(import.meta.env.VITE_EVENT_INSTAGRAM_URL || '').trim();
+
   return (
-    <footer className="border-t border-[#1e1e3f] bg-[#050510]/95 backdrop-blur-sm py-8 px-4 text-center text-sm text-gray-400">
-      <div className="max-w-7xl mx-auto space-y-2">
-        <p className="text-gray-200 font-semibold">Engineering Department | Institute of Engineering and Technology | Deen Dayal Upadhyaya Gorakhpur University, Gorakhpur</p>
-        <p>
-          Organized by <span className="text-white">Ignite Team</span> | Tech Team: <a href="https://www.teamparadox.in/" className="text-[#ff2d78] hover:underline">Team Paradox</a>
-        </p>
-        <p>
-          Developer Contact: <a href="mailto:aditya@teamparadox.in" className="text-[#ff2d78] hover:underline">aditya@teamparadox.in</a> | Support: <a href="mailto:support@teamparadox.in" className="text-[#ff2d78] hover:underline">support@teamparadox.in</a>
-        </p>
-        <p>
-          Feedback: <a href="mailto:support@teamparadox.in?subject=Ignite%2026%20Feedback" className="text-[#00f5ff] hover:underline">Send feedback</a>
-          {' '}| For any issue include your roll number and screenshot for faster support.
-        </p>
-        <p className="text-xs text-gray-500">&copy; 2026 Ignite'26. All rights reserved.</p>
+    <footer className="border-t border-[#1e1e3f] bg-[#050510]/95 backdrop-blur-sm px-4 py-10 text-sm text-gray-400">
+      <div className="max-w-7xl mx-auto">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-6 md:px-8 md:py-7">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+            <div>
+              <p className="text-xs uppercase tracking-wider text-gray-500 mb-2">Institution</p>
+              <p className="text-gray-200 font-semibold leading-relaxed">
+                Engineering Department, Institute of Engineering and Technology
+              </p>
+              <p className="text-gray-400 mt-1">Deen Dayal Upadhyaya Gorakhpur University, Gorakhpur</p>
+            </div>
+
+            <div>
+              <p className="text-xs uppercase tracking-wider text-gray-500 mb-2">Organizers</p>
+              <p>
+                Ignite Team
+                {' '}| Tech Team:
+                {' '}
+                <a href="https://www.teamparadox.in/" className="text-[#ff2d78] hover:text-[#ff5f98] transition-colors">Team Paradox</a>
+              </p>
+              {(whatsappLink || instagramLink) && (
+                <p className="mt-2">
+                  Event Socials:
+                  {whatsappLink && (
+                    <>
+                      {' '}
+                      <a href={whatsappLink} target="_blank" rel="noreferrer" className="text-[#25D366] hover:underline">WhatsApp</a>
+                    </>
+                  )}
+                  {whatsappLink && instagramLink && ' | '}
+                  {instagramLink && (
+                    <a href={instagramLink} target="_blank" rel="noreferrer" className="text-[#E1306C] hover:underline">Instagram</a>
+                  )}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <p className="text-xs uppercase tracking-wider text-gray-500 mb-2">Contact</p>
+              <p>
+                Developer:
+                {' '}
+                <a href="mailto:aditya@teamparadox.in" className="text-[#ff2d78] hover:text-[#ff5f98] transition-colors">aditya@teamparadox.in</a>
+              </p>
+              <p>
+                Support:
+                {' '}
+                <a href="mailto:support@teamparadox.in" className="text-[#ff2d78] hover:text-[#ff5f98] transition-colors">support@teamparadox.in</a>
+              </p>
+              <p className="mt-2">
+                <a href="mailto:support@teamparadox.in?subject=Ignite%2026%20Feedback" className="text-[#00f5ff] hover:underline">Send feedback</a>
+                {' '}with roll number and screenshot for faster support.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 pt-4 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-gray-500">
+            <p>&copy; 2026 Ignite'26. All rights reserved.</p>
+            <p>Designed for a smooth and secure registration experience.</p>
+          </div>
+        </div>
       </div>
     </footer>
   );
