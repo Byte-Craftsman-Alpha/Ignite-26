@@ -1,7 +1,7 @@
 # Ignite 26
 
 Frontend: React + TypeScript + Vite  
-Backend/API routes: serverless handlers in `api/` (Supabase-backed)
+Backend/API routes: serverless handlers in `api/` (SQLite-backed)
 
 ## Prerequisites
 
@@ -16,15 +16,16 @@ npm install
 
 ## Run Locally
 
-Start the Vite dev server:
+Start frontend + local API server together:
 
 ```bash
 npm run dev
 ```
 
-By default, the app runs at:
+By default:
 
-`http://localhost:5173`
+- Frontend: `http://localhost:5173`
+- API: `http://127.0.0.1:8787` (proxied from frontend as `/api`)
 
 ## Build for Production
 
@@ -44,22 +45,18 @@ npm run build
 
 ## Environment Variables (API)
 
-The serverless API layer expects these variables:
+The serverless API layer now uses local SQLite:
 
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_DB_SCHEMA`
-- `SUPABASE_SERVICE_ROLE_KEY`
+- `SQLITE_DB_PATH` (example: `./data/ignite26.db`)
 
-## Participants Schema Migration
+On first run, tables are auto-created and a default admin is seeded:
 
-To apply the updated registration schema, run `database/participants_schema_update.sql` in the Supabase SQL editor.
+- email: `admin@ignite26.edu.in`
+- password: `admin123`
 
 ## Current Status (checked on March 4, 2026)
 
 Commands executed:
 
-- `npm run lint` -> fails with ESLint errors (mainly `no-explicit-any` and one `set-state-in-effect` issue).
-- `npm run build` -> fails with TypeScript errors due to missing type declarations for `lucide-react`.
-
-If you want, I can fix these issues and make lint/build pass in a follow-up.
+- `npm run build` -> passes
+- `npm run lint` -> still has existing lint issues in some frontend files

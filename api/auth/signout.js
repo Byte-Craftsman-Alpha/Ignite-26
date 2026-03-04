@@ -1,4 +1,4 @@
-import supabase from '../_supabase.js';
+import db from '../_db.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -10,7 +10,7 @@ export default async function handler(req, res) {
   try {
     const authHeader = req.headers.authorization;
     const token = authHeader ? authHeader.replace('Bearer ', '') : req.body?.token;
-    if (token) await supabase.from('auth_sessions').delete().eq('id', token);
+    if (token) db.prepare('DELETE FROM auth_sessions WHERE id = ?').run(token);
     return res.status(200).json({ ok: true });
   } catch (err) {
     return res.status(500).json({ error: err.message });

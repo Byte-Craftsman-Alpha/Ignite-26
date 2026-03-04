@@ -1,61 +1,184 @@
-import supabase from './_supabase.js';
+import db, { encodeSkills, toParticipant } from './_db.js';
+import { requireAdmin } from './_auth.js';
+import { writeActivity } from './_activity.js';
 
 const ALLOWED_YEARS = ['1st Year', '2nd Year'];
 
+function validateParticipantInput(payload) {
+  const { email, full_name, roll_number, branch, year, skills, payment_id, whatsapp_number } = payload;
+  if (!email || !full_name || !roll_number || !branch || !year || skills === undefined || !payment_id || !whatsapp_number) {
+    return 'All fields are required';
+  }
+  if (!/^\d{13}$/.test(String(roll_number))) return 'Roll number must be exactly 13 digits';
+  if (!/^\d{10}$/.test(String(whatsapp_number))) return 'WhatsApp number must be exactly 10 digits';
+  if (!Array.isArray(skills)) return 'Invalid skills value';
+  if (!ALLOWED_YEARS.includes(year)) return 'Only 1st Year and 2nd Year registrations are allowed';
+  return null;
+}
+
+function checkDuplicate(field, value, currentId = null) {
+  if (!value) return false;
+  if (currentId) {
+    return db.prepare(`SELECT id FROM participants WHERE ${field} = ? AND id != ?`).get(value, currentId);
+  }
+  return db.prepare(`SELECT id FROM participants WHERE ${field} = ?`).get(value);
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.status(204).end();
 
   try {
     if (req.method === 'GET') {
+      const admin = requireAdmin(req, res);
+      if (!admin) return;
+
       const { search, branch } = req.query;
-      let query = supabase.from('participants').select('*').order('registered_at', { ascending: false });
-      if (search) query = query.or(`full_name.ilike.%${search}%,roll_number.ilike.%${search}%,email.ilike.%${search}%,payment_id.ilike.%${search}%,whatsapp_number.ilike.%${search}%`);
-      if (branch && branch !== 'all') query = query.eq('branch', branch);
-      const { data, error } = await query;
-      if (error) throw error;
-      return res.status(200).json(data);
+      const params = [];
+      let where = '1=1';
+
+      if (search) {
+        where += ' AND (full_name LIKE ? OR roll_number LIKE ? OR email LIKE ? OR payment_id LIKE ? OR whatsapp_number LIKE ?)';
+        const needle = `%${search}%`;
+        params.push(needle, needle, needle, needle, needle);
+      }
+      if (branch && branch !== 'all') {
+        where += ' AND branch = ?';
+        params.push(branch);
+      }
+
+      const rows = db
+        .prepare(`SELECT * FROM participants WHERE ${where} ORDER BY registered_at DESC`)
+        .all(...params)
+        .map(toParticipant);
+      return res.status(200).json(rows);
     }
 
     if (req.method === 'POST') {
+      const validationError = validateParticipantInput(req.body || {});
+      if (validationError) return res.status(400).json({ error: validationError });
+
       const { email, full_name, roll_number, branch, year, skills, payment_id, whatsapp_number } = req.body;
-      if (!email || !full_name || !roll_number || !branch || !year || !skills || !payment_id || !whatsapp_number)
-        return res.status(400).json({ error: 'All fields are required' });
-      if (!/^\d{13}$/.test(String(roll_number))) {
-        return res.status(400).json({ error: 'Roll number must be exactly 13 digits' });
+
+      if (checkDuplicate('roll_number', roll_number)) {
+        return res.status(409).json({ error: 'This roll number is already registered' });
       }
-      if (!/^\d{10}$/.test(String(whatsapp_number))) {
-        return res.status(400).json({ error: 'WhatsApp number must be exactly 10 digits' });
+      if (checkDuplicate('email', email)) {
+        return res.status(409).json({ error: 'This email address is already registered' });
       }
-      if (!Array.isArray(skills)) {
-        return res.status(400).json({ error: 'Invalid skills value' });
+      if (checkDuplicate('payment_id', payment_id)) {
+        return res.status(409).json({ error: 'This registration payment ID is already used' });
       }
-      if (!ALLOWED_YEARS.includes(year)) {
-        return res.status(400).json({ error: 'Only 1st Year and 2nd Year registrations are allowed' });
+      if (checkDuplicate('whatsapp_number', whatsapp_number)) {
+        return res.status(409).json({ error: 'This WhatsApp number is already registered' });
       }
 
-      // Uniqueness check
-      const { data: existing } = await supabase.from('participants').select('id').eq('roll_number', roll_number).single();
-      if (existing) return res.status(409).json({ error: 'This roll number is already registered' });
+      const result = db
+        .prepare(
+          `
+            INSERT INTO participants (email, full_name, roll_number, branch, year, skills, payment_id, whatsapp_number)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          `
+        )
+        .run(email, full_name, roll_number, branch, year, encodeSkills(skills), payment_id, whatsapp_number);
 
-      const { data: existingEmail } = await supabase.from('participants').select('id').eq('email', email).single();
-      if (existingEmail) return res.status(409).json({ error: 'This email address is already registered' });
+      const row = db.prepare('SELECT * FROM participants WHERE id = ?').get(result.lastInsertRowid);
+      const participant = toParticipant(row);
 
-      const { data: existingPayment } = await supabase.from('participants').select('id').eq('payment_id', payment_id).single();
-      if (existingPayment) return res.status(409).json({ error: 'This registration payment ID is already used' });
+      writeActivity({
+        entity_type: 'participant',
+        entity_id: participant.id,
+        action: 'registration_created',
+        actor_email: participant.email,
+        details: {
+          full_name: participant.full_name,
+          roll_number: participant.roll_number,
+          branch: participant.branch,
+          year: participant.year,
+        },
+      });
 
-      const { data: existingWhatsapp } = await supabase.from('participants').select('id').eq('whatsapp_number', whatsapp_number).single();
-      if (existingWhatsapp) return res.status(409).json({ error: 'This WhatsApp number is already registered' });
+      return res.status(201).json(participant);
+    }
 
-      const { data, error } = await supabase
-        .from('participants')
-        .insert({ email, full_name, roll_number, branch, year, skills, payment_id, whatsapp_number })
-        .select()
-        .single();
-      if (error) throw error;
-      return res.status(201).json(data);
+    if (req.method === 'PUT') {
+      const admin = requireAdmin(req, res);
+      if (!admin) return;
+
+      const { id, email, full_name, roll_number, branch, year, skills, payment_id, whatsapp_number } = req.body || {};
+      if (!id) return res.status(400).json({ error: 'Participant ID required' });
+
+      const existing = db.prepare('SELECT * FROM participants WHERE id = ?').get(id);
+      if (!existing) return res.status(404).json({ error: 'Participant not found' });
+
+      const validationError = validateParticipantInput({ email, full_name, roll_number, branch, year, skills, payment_id, whatsapp_number });
+      if (validationError) return res.status(400).json({ error: validationError });
+
+      if (checkDuplicate('roll_number', roll_number, id)) {
+        return res.status(409).json({ error: 'This roll number is already registered' });
+      }
+      if (checkDuplicate('email', email, id)) {
+        return res.status(409).json({ error: 'This email address is already registered' });
+      }
+      if (checkDuplicate('payment_id', payment_id, id)) {
+        return res.status(409).json({ error: 'This registration payment ID is already used' });
+      }
+      if (checkDuplicate('whatsapp_number', whatsapp_number, id)) {
+        return res.status(409).json({ error: 'This WhatsApp number is already registered' });
+      }
+
+      db
+        .prepare(
+          `
+            UPDATE participants
+            SET email = ?, full_name = ?, roll_number = ?, branch = ?, year = ?, skills = ?, payment_id = ?, whatsapp_number = ?
+            WHERE id = ?
+          `
+        )
+        .run(email, full_name, roll_number, branch, year, encodeSkills(skills), payment_id, whatsapp_number, id);
+
+      const updated = toParticipant(db.prepare('SELECT * FROM participants WHERE id = ?').get(id));
+      const previous = toParticipant(existing);
+
+      writeActivity({
+        entity_type: 'participant',
+        entity_id: updated.id,
+        action: 'registration_updated',
+        actor_email: admin.email,
+        details: {
+          before: previous,
+          after: updated,
+        },
+      });
+
+      return res.status(200).json(updated);
+    }
+
+    if (req.method === 'DELETE') {
+      const admin = requireAdmin(req, res);
+      if (!admin) return;
+
+      const { id } = req.body || {};
+      if (!id) return res.status(400).json({ error: 'Participant ID required' });
+
+      const existing = db.prepare('SELECT * FROM participants WHERE id = ?').get(id);
+      if (!existing) return res.status(404).json({ error: 'Participant not found' });
+
+      db.prepare('DELETE FROM participants WHERE id = ?').run(id);
+
+      writeActivity({
+        entity_type: 'participant',
+        entity_id: Number(id),
+        action: 'registration_deleted',
+        actor_email: admin.email,
+        details: {
+          deleted_record: toParticipant(existing),
+        },
+      });
+
+      return res.status(200).json({ ok: true });
     }
 
     return res.status(405).json({ error: 'Method not allowed' });

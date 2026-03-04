@@ -1,4 +1,4 @@
-import supabase from './_supabase.js';
+import db from './_db.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -8,28 +8,26 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
-      const { data, error } = await supabase.from('winners').select('*').order('created_at', { ascending: true });
-      if (error) throw error;
-      return res.status(200).json(data);
+      const rows = db.prepare('SELECT * FROM winners ORDER BY created_at ASC').all();
+      return res.status(200).json(rows);
     }
 
     if (req.method === 'POST') {
       const { participant_id, name, roll_no, branch, award_title, image_url, description } = req.body;
       if (!name || !award_title) return res.status(400).json({ error: 'Name and award title are required' });
-      const { data, error } = await supabase
-        .from('winners')
-        .insert({ participant_id, name, roll_no, branch, award_title, image_url: image_url || '', description: description || '' })
-        .select()
-        .single();
-      if (error) throw error;
-      return res.status(201).json(data);
+      const result = db
+        .prepare(
+          'INSERT INTO winners (participant_id, name, roll_no, branch, award_title, image_url, description) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        )
+        .run(participant_id || null, name, roll_no || '', branch || '', award_title, image_url || '', description || '');
+      const row = db.prepare('SELECT * FROM winners WHERE id = ?').get(result.lastInsertRowid);
+      return res.status(201).json(row);
     }
 
     if (req.method === 'DELETE') {
       const { id } = req.body;
       if (!id) return res.status(400).json({ error: 'Winner ID required' });
-      const { error } = await supabase.from('winners').delete().eq('id', id);
-      if (error) throw error;
+      db.prepare('DELETE FROM winners WHERE id = ?').run(id);
       return res.status(200).json({ ok: true });
     }
 

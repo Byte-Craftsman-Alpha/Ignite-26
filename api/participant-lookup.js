@@ -1,4 +1,4 @@
-import supabase from './_supabase.js';
+import db, { toParticipant } from './_db.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -11,15 +11,12 @@ export default async function handler(req, res) {
     const { roll_number, whatsapp_number } = req.body;
     if (!roll_number || !whatsapp_number) return res.status(400).json({ error: 'Roll number and WhatsApp number required' });
 
-    const { data, error } = await supabase
-      .from('participants')
-      .select('*')
-      .eq('roll_number', roll_number)
-      .eq('whatsapp_number', whatsapp_number)
-      .single();
+    const row = db
+      .prepare('SELECT * FROM participants WHERE roll_number = ? AND whatsapp_number = ? LIMIT 1')
+      .get(roll_number, whatsapp_number);
 
-    if (error || !data) return res.status(404).json({ error: 'No participant found with those credentials' });
-    return res.status(200).json(data);
+    if (!row) return res.status(404).json({ error: 'No participant found with those credentials' });
+    return res.status(200).json(toParticipant(row));
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }

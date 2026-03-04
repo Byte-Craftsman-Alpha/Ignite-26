@@ -1,4 +1,4 @@
-import supabase from '../_supabase.js';
+import { getAdminFromRequest } from '../_auth.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -8,19 +8,9 @@ export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) return res.status(401).json({ error: 'No token' });
-    const token = authHeader.replace('Bearer ', '');
-
-    const { data: session, error } = await supabase
-      .from('auth_sessions')
-      .select('user_id, auth_users(id, email)')
-      .eq('id', token)
-      .gt('expires_at', new Date().toISOString())
-      .single();
-
-    if (error || !session) return res.status(401).json({ error: 'Invalid or expired token' });
-    return res.status(200).json({ user: session.auth_users });
+    const row = getAdminFromRequest(req);
+    if (!row) return res.status(401).json({ error: 'Invalid or expired token' });
+    return res.status(200).json({ user: { id: row.id, email: row.email } });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }

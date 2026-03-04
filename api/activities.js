@@ -1,4 +1,5 @@
 import db from './_db.js';
+import { toActivityLog } from './_activity.js';
 import { requireAdmin } from './_auth.js';
 
 export default async function handler(req, res) {
@@ -6,21 +7,24 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.status(204).end();
+
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
     const admin = requireAdmin(req, res);
     if (!admin) return;
 
-    const participants = db.prepare('SELECT id, check_in_status, branch, year FROM participants').all();
+    const requestedLimit = Number(req.query.limit || 40);
+    const limit = Number.isFinite(requestedLimit) ? Math.min(Math.max(requestedLimit, 1), 200) : 40;
 
-    const total = participants.length;
-    const checkedIn = participants.filter(p => Boolean(p.check_in_status)).length;
-    const branchCounts = participants.reduce((acc, p) => { acc[p.branch] = (acc[p.branch] || 0) + 1; return acc; }, {});
-    const yearCounts = participants.reduce((acc, p) => { acc[p.year] = (acc[p.year] || 0) + 1; return acc; }, {});
+    const rows = db
+      .prepare('SELECT * FROM activity_logs ORDER BY created_at DESC LIMIT ?')
+      .all(limit)
+      .map(toActivityLog);
 
-    return res.status(200).json({ total, checkedIn, notCheckedIn: total - checkedIn, branchCounts, yearCounts });
+    return res.status(200).json(rows);
   } catch (err) {
+    console.error('Activity logs API error:', err);
     return res.status(500).json({ error: err.message });
   }
 }

@@ -1,4 +1,4 @@
-import db, { toParticipant } from './_db.js';
+﻿import db, { toParticipant } from './_db.js';
 import { requireAdmin } from './_auth.js';
 import { writeActivity } from './_activity.js';
 
@@ -13,38 +13,35 @@ export default async function handler(req, res) {
     const admin = requireAdmin(req, res);
     if (!admin) return;
 
-    const { id, check_in_status } = req.body;
+    const { id, payment_verified } = req.body || {};
     if (!id) return res.status(400).json({ error: 'Participant ID required' });
+    if (typeof payment_verified !== 'boolean') {
+      return res.status(400).json({ error: 'payment_verified must be true or false' });
+    }
 
     const previous = db.prepare('SELECT * FROM participants WHERE id = ?').get(id);
     if (!previous) return res.status(404).json({ error: 'Participant not found' });
 
-    const checkInTime = check_in_status ? new Date().toISOString() : null;
-    const result = db
-      .prepare('UPDATE participants SET check_in_status = ?, check_in_time = ? WHERE id = ?')
-      .run(check_in_status ? 1 : 0, checkInTime, id);
+    db.prepare('UPDATE participants SET payment_verified = ? WHERE id = ?').run(payment_verified ? 1 : 0, id);
 
-    if (result.changes === 0) return res.status(404).json({ error: 'Participant not found' });
-
-    const row = db.prepare('SELECT * FROM participants WHERE id = ?').get(id);
-    const updated = toParticipant(row);
+    const updated = toParticipant(db.prepare('SELECT * FROM participants WHERE id = ?').get(id));
 
     writeActivity({
       entity_type: 'participant',
       entity_id: updated.id,
-      action: check_in_status ? 'checkin_marked' : 'checkin_reverted',
+      action: payment_verified ? 'payment_verified' : 'payment_unverified',
       actor_email: admin.email,
       details: {
         full_name: updated.full_name,
         roll_number: updated.roll_number,
-        previous_check_in_status: Boolean(previous.check_in_status),
-        new_check_in_status: updated.check_in_status,
+        previous_payment_verified: Boolean(previous.payment_verified),
+        new_payment_verified: updated.payment_verified,
       },
     });
 
     return res.status(200).json(updated);
   } catch (err) {
-    console.error('Check-in error:', err);
+    console.error('Payment verification API error:', err);
     return res.status(500).json({ error: err.message });
   }
 }

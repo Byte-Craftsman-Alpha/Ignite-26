@@ -33,6 +33,7 @@ export default function Navbar() {
     { to: '/register', label: 'Register' },
     { to: '/gallery', label: 'Gallery' },
     { to: '/hall-of-fame', label: 'Hall of Fame' },
+    { to: '/management-team', label: 'Management Team' },
     { to: '/my-profile', label: 'My Profile' },
   ];
 

@@ -1,10 +1,24 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Users, UserCheck, Search, CheckCircle, XCircle, Upload, Trophy, RefreshCw, ChevronDown } from 'lucide-react';
+import {
+  Users,
+  UserCheck,
+  Search,
+  CheckCircle,
+  XCircle,
+  Upload,
+  Trophy,
+  RefreshCw,
+  ChevronDown,
+  Pencil,
+  Trash2,
+  ShieldCheck,
+  X,
+} from 'lucide-react';
 import { authHeaders } from '../../lib/auth';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import { readJsonSafe } from '../../lib/http';
+import { getErrorMessage, readJsonSafe } from '../../lib/http';
 
 interface Participant {
   id: number;
@@ -15,6 +29,8 @@ interface Participant {
   year: string;
   whatsapp_number: string;
   skills: string[];
+  payment_id: string;
+  payment_verified: boolean;
   check_in_status: boolean;
   check_in_time: string | null;
   registered_at: string;
@@ -28,6 +44,37 @@ interface Stats {
   yearCounts: Record<string, number>;
 }
 
+interface ParticipantForm {
+  email: string;
+  full_name: string;
+  roll_number: string;
+  branch: string;
+  year: string;
+  skills: string;
+  payment_id: string;
+  whatsapp_number: string;
+}
+
+function toFormData(participant: Participant): ParticipantForm {
+  return {
+    email: participant.email,
+    full_name: participant.full_name,
+    roll_number: participant.roll_number,
+    branch: participant.branch,
+    year: participant.year,
+    skills: participant.skills.join(', '),
+    payment_id: participant.payment_id,
+    whatsapp_number: participant.whatsapp_number,
+  };
+}
+
+function parseSkills(raw: string): string[] {
+  return raw
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean);
+}
+
 export default function AdminDashboard() {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -35,7 +82,14 @@ export default function AdminDashboard() {
   const [search, setSearch] = useState('');
   const [branch, setBranch] = useState('all');
   const [checkingIn, setCheckingIn] = useState<number | null>(null);
+  const [verifyingPayment, setVerifyingPayment] = useState<number | null>(null);
   const [branches, setBranches] = useState<string[]>([]);
+
+  const [editingParticipant, setEditingParticipant] = useState<Participant | null>(null);
+  const [editForm, setEditForm] = useState<ParticipantForm | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [editError, setEditError] = useState('');
 
   const fetchData = useCallback(async () => {
     try {
@@ -51,11 +105,16 @@ export default function AdminDashboard() {
       setParticipants(Array.isArray(pData) ? pData : []);
       setStats(sData ?? null);
       if (!branches.length && sData?.branchCounts) setBranches(Object.keys(sData.branchCounts));
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
-  }, [search, branch]);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [search, branch, branches.length]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleCheckIn = async (id: number, currentStatus: boolean) => {
     setCheckingIn(id);
@@ -66,8 +125,87 @@ export default function AdminDashboard() {
         body: JSON.stringify({ id, check_in_status: !currentStatus }),
       });
       if (res.ok) fetchData();
-    } catch (err) { console.error(err); }
-    finally { setCheckingIn(null); }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCheckingIn(null);
+    }
+  };
+
+  const handlePaymentVerification = async (id: number, currentStatus: boolean) => {
+    setVerifyingPayment(id);
+    try {
+      const res = await fetch('/api/payment-verification', {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify({ id, payment_verified: !currentStatus }),
+      });
+      if (res.ok) fetchData();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setVerifyingPayment(null);
+    }
+  };
+
+  const openEdit = (participant: Participant) => {
+    setEditingParticipant(participant);
+    setEditForm(toFormData(participant));
+    setEditError('');
+  };
+
+  const closeEdit = () => {
+    setEditingParticipant(null);
+    setEditForm(null);
+    setEditError('');
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingParticipant || !editForm) return;
+
+    setSavingEdit(true);
+    setEditError('');
+
+    try {
+      const payload = {
+        id: editingParticipant.id,
+        ...editForm,
+        skills: parseSkills(editForm.skills),
+      };
+      const res = await fetch('/api/participants', {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify(payload),
+      });
+      const data = await readJsonSafe<{ error?: string }>(res);
+      if (!res.ok) throw new Error(getErrorMessage(data, 'Failed to update registration'));
+      closeEdit();
+      fetchData();
+    } catch (err: unknown) {
+      setEditError(err instanceof Error ? err.message : 'Failed to update registration');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleDelete = async (participant: Participant) => {
+    const confirmDelete = window.confirm(`Delete registration for ${participant.full_name}? This cannot be undone.`);
+    if (!confirmDelete) return;
+
+    setDeletingId(participant.id);
+    try {
+      const res = await fetch('/api/participants', {
+        method: 'DELETE',
+        headers: authHeaders(),
+        body: JSON.stringify({ id: participant.id }),
+      });
+      if (res.ok) fetchData();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const checkinPct = stats ? Math.round((stats.checkedIn / (stats.total || 1)) * 100) : 0;
@@ -75,13 +213,15 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-[#0d0a1a] text-white pt-20 pb-16">
       <div className="max-w-7xl mx-auto px-4">
-        {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-black">Admin Dashboard</h1>
-            <p className="text-gray-400 text-sm mt-1">Ignite'26 &mdash; Check-in Management</p>
+            <p className="text-gray-400 text-sm mt-1">Ignite'26 - Registration and Check-in Management</p>
           </div>
           <div className="flex gap-3">
+            <Link to="/admin/management-team" className="px-4 py-2 rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-sm flex items-center gap-2 hover:bg-indigo-500/30 transition-colors">
+              <ShieldCheck size={16} /> Team
+            </Link>
             <Link to="/admin/upload" className="px-4 py-2 rounded-xl bg-purple-600/20 border border-purple-500/30 text-purple-300 text-sm flex items-center gap-2 hover:bg-purple-600/30 transition-colors">
               <Upload size={16} /> Media
             </Link>
@@ -94,11 +234,9 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Stats Cards */}
         {stats && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-              className="p-5 rounded-2xl bg-white/5 border border-white/10">
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-5 rounded-2xl bg-white/5 border border-white/10">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-9 h-9 rounded-lg bg-purple-500/20 flex items-center justify-center">
                   <Users size={18} className="text-purple-400" />
@@ -108,8 +246,7 @@ export default function AdminDashboard() {
               <p className="text-3xl font-black">{stats.total}</p>
             </motion.div>
 
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
-              className="p-5 rounded-2xl bg-white/5 border border-white/10">
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="p-5 rounded-2xl bg-white/5 border border-white/10">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-9 h-9 rounded-lg bg-emerald-500/20 flex items-center justify-center">
                   <UserCheck size={18} className="text-emerald-400" />
@@ -119,8 +256,7 @@ export default function AdminDashboard() {
               <p className="text-3xl font-black text-emerald-400">{stats.checkedIn}</p>
             </motion.div>
 
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-              className="p-5 rounded-2xl bg-white/5 border border-white/10">
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="p-5 rounded-2xl bg-white/5 border border-white/10">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-9 h-9 rounded-lg bg-red-500/20 flex items-center justify-center">
                   <XCircle size={18} className="text-red-400" />
@@ -130,8 +266,7 @@ export default function AdminDashboard() {
               <p className="text-3xl font-black text-red-400">{stats.notCheckedIn}</p>
             </motion.div>
 
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-              className="p-5 rounded-2xl bg-white/5 border border-white/10">
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="p-5 rounded-2xl bg-white/5 border border-white/10">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-9 h-9 rounded-lg bg-amber-500/20 flex items-center justify-center">
                   <CheckCircle size={18} className="text-amber-400" />
@@ -143,41 +278,56 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Progress Bar */}
         {stats && (
           <div className="mb-8 p-5 rounded-2xl bg-white/5 border border-white/10">
             <div className="flex justify-between text-sm mb-3">
               <span className="text-gray-400">Check-in Progress</span>
-              <span className="text-white font-semibold">{stats.checkedIn} / {stats.total} students arrived</span>
+              <span className="text-white font-semibold">
+                {stats.checkedIn} / {stats.total} students arrived
+              </span>
             </div>
             <div className="h-3 bg-white/10 rounded-full overflow-hidden">
-              <motion.div initial={{ width: 0 }} animate={{ width: `${checkinPct}%` }} transition={{ duration: 1, ease: 'easeOut' }}
-                className="h-full bg-gradient-to-r from-purple-500 to-emerald-500 rounded-full" />
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${checkinPct}%` }}
+                transition={{ duration: 1, ease: 'easeOut' }}
+                className="h-full bg-gradient-to-r from-purple-500 to-emerald-500 rounded-full"
+              />
             </div>
           </div>
         )}
 
-        {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
           <div className="relative flex-1">
             <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
-            <input value={search} onChange={e => setSearch(e.target.value)}
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
               placeholder="Search by name, roll no, or email..."
-              className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500" />
+              className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500"
+            />
           </div>
           <div className="relative">
-            <select value={branch} onChange={e => setBranch(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 pr-10 text-white focus:outline-none focus:border-purple-500 appearance-none">
+            <select
+              value={branch}
+              onChange={e => setBranch(e.target.value)}
+              className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 pr-10 text-white focus:outline-none focus:border-purple-500 appearance-none"
+            >
               <option value="all">All Branches</option>
-              {branches.map(b => <option key={b} value={b}>{b}</option>)}
+              {branches.map(b => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              ))}
             </select>
             <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
           </div>
         </div>
 
-        {/* Table */}
-        {loading ? <LoadingSpinner text="Loading participants..." /> : (
-          <div className="rounded-2xl border border-white/10 overflow-hidden">
+        {loading ? (
+          <LoadingSpinner text="Loading participants..." />
+        ) : (
+          <div className="rounded-2xl border border-white/10 overflow-hidden mb-8">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
@@ -186,8 +336,9 @@ export default function AdminDashboard() {
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider hidden sm:table-cell">Roll No</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider hidden md:table-cell">Branch</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider hidden lg:table-cell">Year</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider hidden md:table-cell">Payment</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Status</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Action</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
@@ -213,6 +364,17 @@ export default function AdminDashboard() {
                       <td className="px-4 py-3 hidden lg:table-cell">
                         <span className="text-gray-400 text-sm">{p.year}</span>
                       </td>
+                      <td className="px-4 py-3 hidden md:table-cell">
+                        {p.payment_verified ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
+                            Verified
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold">
+                            Pending
+                          </span>
+                        )}
+                      </td>
                       <td className="px-4 py-3">
                         {p.check_in_status ? (
                           <div className="flex items-center gap-1.5">
@@ -225,21 +387,48 @@ export default function AdminDashboard() {
                             <span className="text-gray-500 text-xs">Pending</span>
                           </div>
                         )}
-                        {p.check_in_time && (
-                          <p className="text-gray-600 text-xs">{new Date(p.check_in_time).toLocaleTimeString()}</p>
-                        )}
+                        {p.check_in_time && <p className="text-gray-600 text-xs">{new Date(p.check_in_time).toLocaleTimeString()}</p>}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <button
-                          onClick={() => handleCheckIn(p.id, p.check_in_status)}
-                          disabled={checkingIn === p.id}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50 ${
-                            p.check_in_status
-                              ? 'bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20'
-                              : 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
-                          }`}>
-                          {checkingIn === p.id ? '...' : p.check_in_status ? 'Undo' : 'Check In'}
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => handlePaymentVerification(p.id, p.payment_verified)}
+                            disabled={verifyingPayment === p.id}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50 ${
+                              p.payment_verified
+                                ? 'bg-amber-500/10 border border-amber-500/30 text-amber-300 hover:bg-amber-500/20'
+                                : 'bg-blue-500/10 border border-blue-500/30 text-blue-300 hover:bg-blue-500/20'
+                            }`}
+                          >
+                            {verifyingPayment === p.id ? '...' : p.payment_verified ? 'Unverify Pay' : 'Verify Pay'}
+                          </button>
+                          <button
+                            onClick={() => handleCheckIn(p.id, p.check_in_status)}
+                            disabled={checkingIn === p.id}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50 ${
+                              p.check_in_status
+                                ? 'bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20'
+                                : 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
+                            }`}
+                          >
+                            {checkingIn === p.id ? '...' : p.check_in_status ? 'Undo' : 'Check In'}
+                          </button>
+                          <button
+                            onClick={() => openEdit(p)}
+                            className="w-8 h-8 rounded-lg border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20 flex items-center justify-center"
+                            title="Edit registration"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(p)}
+                            disabled={deletingId === p.id}
+                            className="w-8 h-8 rounded-lg border border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/20 disabled:opacity-50 flex items-center justify-center"
+                            title="Delete registration"
+                          >
+                            {deletingId === p.id ? '...' : <Trash2 size={14} />}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -254,7 +443,108 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+
       </div>
+
+      {editingParticipant && editForm && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-2xl bg-[#171127] border border-white/10 rounded-2xl">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
+              <h3 className="text-lg font-bold text-white">Edit Registration</h3>
+              <button onClick={closeEdit} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-300">
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs text-gray-400 mb-1.5">Full Name</label>
+                <input
+                  value={editForm.full_name}
+                  onChange={e => setEditForm(prev => (prev ? { ...prev, full_name: e.target.value } : prev))}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1.5">Email</label>
+                <input
+                  type="email"
+                  value={editForm.email}
+                  onChange={e => setEditForm(prev => (prev ? { ...prev, email: e.target.value } : prev))}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1.5">Roll Number</label>
+                <input
+                  value={editForm.roll_number}
+                  onChange={e => setEditForm(prev => (prev ? { ...prev, roll_number: e.target.value } : prev))}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1.5">WhatsApp Number</label>
+                <input
+                  value={editForm.whatsapp_number}
+                  onChange={e => setEditForm(prev => (prev ? { ...prev, whatsapp_number: e.target.value } : prev))}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1.5">Branch</label>
+                <input
+                  value={editForm.branch}
+                  onChange={e => setEditForm(prev => (prev ? { ...prev, branch: e.target.value } : prev))}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1.5">Year</label>
+                <select
+                  value={editForm.year}
+                  onChange={e => setEditForm(prev => (prev ? { ...prev, year: e.target.value } : prev))}
+                  className="w-full bg-[#1a1530] border border-white/10 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="1st Year">1st Year</option>
+                  <option value="2nd Year">2nd Year</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1.5">Payment ID</label>
+                <input
+                  value={editForm.payment_id}
+                  onChange={e => setEditForm(prev => (prev ? { ...prev, payment_id: e.target.value } : prev))}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1.5">Skills (comma-separated)</label>
+                <input
+                  value={editForm.skills}
+                  onChange={e => setEditForm(prev => (prev ? { ...prev, skills: e.target.value } : prev))}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              {editError && <p className="md:col-span-2 text-sm text-red-400">{editError}</p>}
+
+              <div className="md:col-span-2 flex justify-end gap-3 mt-1">
+                <button type="button" onClick={closeEdit} className="px-4 py-2 rounded-xl border border-white/20 text-gray-300 hover:bg-white/10">
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingEdit}
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-500 text-white font-semibold hover:opacity-90 disabled:opacity-50"
+                >
+                  {savingEdit ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
+
