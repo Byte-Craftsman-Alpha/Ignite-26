@@ -4,6 +4,8 @@ import { UploadCloud, CheckCircle2, AlertCircle } from 'lucide-react';
 import { getErrorMessage, readJsonSafe } from '../lib/http';
 import { generateImagePreviewDataUrl, generateVideoPosterDataUrl, readFileAsDataUrl } from '../lib/mediaUpload';
 
+const MAX_PUBLIC_UPLOAD_BYTES = 16 * 1024 * 1024; // 16 MB file (~21 MB base64 payload)
+
 export default function PublicMediaUpload() {
   const [file, setFile] = useState<File | null>(null);
   const [caption, setCaption] = useState('');
@@ -16,6 +18,10 @@ export default function PublicMediaUpload() {
     e.preventDefault();
     if (!file) {
       setError('Please select a file first.');
+      return;
+    }
+    if (file.size > MAX_PUBLIC_UPLOAD_BYTES) {
+      setError('File is too large. Please upload media up to 16 MB.');
       return;
     }
 
@@ -63,6 +69,7 @@ export default function PublicMediaUpload() {
           <span className="inline-block px-4 py-1.5 rounded-full bg-purple-500/20 text-purple-300 text-sm font-medium mb-4">Ignite'26 Community</span>
           <h1 className="text-4xl font-black mb-2">Public Media Upload</h1>
           <p className="text-gray-400">Share event photos and videos. Submissions are reviewed before publishing.</p>
+          <p className="text-gray-500 text-sm mt-2">Max file size: 16 MB</p>
         </motion.div>
 
         <form onSubmit={handleSubmit} className="bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-2xl p-6 space-y-4">

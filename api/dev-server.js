@@ -17,9 +17,10 @@ import signout from './auth/signout.js';
 
 const app = express();
 const port = Number(process.env.API_PORT || 8787);
+const bodyLimit = String(process.env.API_BODY_LIMIT || '25mb');
 
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: bodyLimit }));
+app.use(express.urlencoded({ extended: true, limit: bodyLimit }));
 
 app.all('/api/participants', (req, res) => participants(req, res));
 app.all('/api/participant-lookup', (req, res) => participantLookup(req, res));
@@ -37,6 +38,13 @@ app.all('/api/auth/signout', (req, res) => signout(req, res));
 
 app.use('/api', (_req, res) => {
   res.status(404).json({ error: 'API route not found' });
+});
+
+app.use((err, _req, res, next) => {
+  if (err?.type === 'entity.too.large') {
+    return res.status(413).json({ error: `Upload is too large. Maximum request size is ${bodyLimit}.` });
+  }
+  return next(err);
 });
 
 const server = app.listen(port, () => {

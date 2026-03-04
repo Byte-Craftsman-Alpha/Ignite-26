@@ -4,7 +4,7 @@
       <div className="max-w-7xl mx-auto space-y-2">
         <p className="text-gray-200 font-semibold">Engineering Department | Institute of Engineering and Technology | Deen Dayal Upadhyaya Gorakhpur University, Gorakhpur</p>
         <p>
-          Organized by <span className="text-white">Ignite Team</span> | Tech Team: <span className="text-[#00f5ff]">Team Paradox</span>
+          Organized by <span className="text-white">Ignite Team</span> | Tech Team: <a href="https://www.teamparadox.in/" className="text-[#ff2d78] hover:underline">Team Paradox</a>
         </p>
         <p>
           Developer Contact: <a href="mailto:aditya@teamparadox.in" className="text-[#ff2d78] hover:underline">aditya@teamparadox.in</a> | Support: <a href="mailto:support@teamparadox.in" className="text-[#ff2d78] hover:underline">support@teamparadox.in</a>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Crown, Menu, X, LogOut, Shield } from 'lucide-react';
+import { Menu, X, LogOut, Shield } from 'lucide-react';
 import { getToken, removeToken } from '../lib/auth';
 
 export default function Navbar() {
@@ -47,8 +47,8 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#ff2d78] to-[#7c3aed] flex items-center justify-center glow-box-pink">
-              <Crown size={16} className="text-white" />
+            <div className="w-8 h-8 rounded-full border border-cyan-300/40 bg-white/5 flex items-center justify-center glow-box-cyan overflow-hidden">
+              <img src="/logo.jpg" alt="Ignite 26 icon" className="w-full h-full object-cover" />
             </div>
             <span className="font-display font-bold text-xl tracking-tight">
               <span className="text-white">Ignite</span>

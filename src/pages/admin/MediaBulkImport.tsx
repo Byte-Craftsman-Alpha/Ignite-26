@@ -4,31 +4,25 @@ import { ArrowLeft, Upload, Link2, CheckCircle2 } from 'lucide-react';
 import { authHeaders } from '../../lib/auth';
 import { generateImagePreviewDataUrl, generateVideoPosterDataUrl, readFileAsDataUrl } from '../../lib/mediaUpload';
 
-function extractDriveFileId(input: string): string | null {
-  const value = input.trim();
-  if (!value) return null;
+type UploadResponse = {
+  imported?: number;
+  resolved?: number;
+  failed_links?: Array<{ link: string; error: string }>;
+};
 
-  const patterns = [
-    /\/file\/d\/([a-zA-Z0-9_-]+)/,
-    /[?&]id=([a-zA-Z0-9_-]+)/,
-    /\/open\?id=([a-zA-Z0-9_-]+)/,
-  ];
-
-  for (const pattern of patterns) {
-    const match = value.match(pattern);
-    if (match?.[1]) return match[1];
-  }
-
-  return null;
-}
-
-async function uploadMedia(payload: Record<string, unknown>) {
+async function uploadMedia(payload: Record<string, unknown>): Promise<{ ok: boolean; data: UploadResponse | null }> {
   const res = await fetch('/api/media', {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify(payload),
   });
-  return res.ok;
+  let data: UploadResponse | null = null;
+  try {
+    data = await res.json();
+  } catch {
+    data = null;
+  }
+  return { ok: res.ok, data };
 }
 
 export default function MediaBulkImport() {
@@ -64,7 +58,7 @@ export default function MediaBulkImport() {
           ? await generateImagePreviewDataUrl(file)
           : await generateVideoPosterDataUrl(file);
 
-        const ok = await uploadMedia({
+        const { ok } = await uploadMedia({
           type,
           category: fileCategory,
           caption: fileCaption,
@@ -96,26 +90,36 @@ export default function MediaBulkImport() {
 
     setDriveLoading(true);
     setDriveResult('');
-    let success = 0;
+    let importedMedia = 0;
+    let resolvedMedia = 0;
+    let failedLinks = 0;
 
-    for (const link of lines) {
-      const id = extractDriveFileId(link);
-      if (!id) continue;
-
-      const url = `https://drive.google.com/uc?export=download&id=${id}`;
-      const thumbUrl = `https://drive.google.com/thumbnail?id=${id}&sz=w1000`;
-      const ok = await uploadMedia({
+    for (let index = 0; index < lines.length; index += 1) {
+      const link = lines[index];
+      setDriveResult(`Importing ${Math.max(importedMedia, 0)}/${Math.max(resolvedMedia, 1)} media...`);
+      const { ok, data } = await uploadMedia({
         type: driveType,
         category: driveCategory,
         caption: driveCaption,
-        url,
-        thumb_url: thumbUrl,
+        drive_link: link,
       });
-      if (ok) success += 1;
+
+      if (!ok) {
+        failedLinks += 1;
+        continue;
+      }
+
+      importedMedia += Number(data?.imported || 0);
+      resolvedMedia += Number(data?.resolved || 0);
+      failedLinks += Array.isArray(data?.failed_links) ? data!.failed_links!.length : 0;
+      setDriveResult(`Importing ${importedMedia}/${Math.max(resolvedMedia, importedMedia, 1)} media...`);
     }
 
     setDriveLoading(false);
-    setDriveResult(`Imported ${success}/${lines.length} Google Drive links.`);
+    setDriveResult(
+      `Imported ${importedMedia}/${Math.max(resolvedMedia, importedMedia)} Google Drive media` +
+      `${failedLinks ? ` (${failedLinks} link${failedLinks > 1 ? 's' : ''} failed)` : ''}.`
+    );
   };
 
   return (

@@ -40,11 +40,11 @@ const FLOW = [
 ];
 
 const FLOATING_ICONS = [
-  { icon: Sparkles, className: 'top-[16%] left-[8%] hidden md:flex', delay: 0.1, duration: 5.5 },
-  { icon: Camera, className: 'top-[30%] right-[10%] hidden md:flex', delay: 0.4, duration: 6.2 },
-  { icon: Mic2, className: 'top-[62%] left-[12%] hidden lg:flex', delay: 0.7, duration: 5.8 },
-  { icon: Star, className: 'top-[70%] right-[14%] hidden md:flex', delay: 1, duration: 6.5 },
-  { icon: PartyPopper, className: 'top-[46%] left-[4%] hidden xl:flex', delay: 1.2, duration: 7.1 },
+  { icon: Sparkles, top: '16%', left: '8%', delay: 0.1, duration: 5.5 },
+  { icon: Camera, top: '30%', right: '10%', delay: 0.4, duration: 6.2 },
+  { icon: Mic2, top: '62%', left: '12%', delay: 0.7, duration: 5.8 },
+  { icon: Star, top: '70%', right: '14%', delay: 1, duration: 6.5 },
+  { icon: PartyPopper, top: '46%', left: '4%', delay: 1.2, duration: 7.1 },
 ];
 
 export default function Home() {
@@ -74,8 +74,9 @@ export default function Home() {
       <div className="pointer-events-none absolute inset-0 z-[1]">
         {FLOATING_ICONS.map((item, idx) => (
           <motion.div
-            key={`${item.className}-${idx}`}
-            className={`absolute ${item.className} w-12 h-12 rounded-2xl border border-white/15 bg-white/5 backdrop-blur-sm items-center justify-center text-purple-200`}
+            key={`floating-icon-${idx}`}
+            className="absolute hidden md:flex w-12 h-12 rounded-2xl border border-white/15 bg-white/5 backdrop-blur-sm items-center justify-center text-purple-200"
+            style={{ top: item.top, left: item.left, right: item.right }}
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: [0.4, 0.8, 0.4], y: [0, -14, 0], rotate: [0, 4, 0] }}
             transition={{ delay: item.delay, duration: item.duration, repeat: Infinity, ease: 'easeInOut' }}
