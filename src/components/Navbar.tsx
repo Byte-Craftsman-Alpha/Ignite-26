@@ -49,9 +49,9 @@ export default function Navbar() {
               <Crown size={16} className="text-white" />
             </div>
             <span className="font-bold text-xl tracking-tight">
-              <span className="text-white">Fresh</span>
-              <span className="text-amber-400">ero</span>
-              <span className="text-purple-400 text-sm ml-1">2025</span>
+              <span className="text-white">Ignite</span>
+              <span className="text-amber-400">'26</span>
+              <span className="text-purple-400 text-sm ml-1">2026</span>
             </span>
           </Link>
 

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Shield, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { setToken } from '../../lib/auth';
+import { getErrorMessage, readJsonSafe } from '../../lib/http';
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('');
@@ -22,8 +23,9 @@ export default function AdminLogin() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Login failed');
+      const data = await readJsonSafe<{ token?: string; error?: string }>(res);
+      if (!res.ok) throw new Error(getErrorMessage(data, 'Login failed'));
+      if (!data?.token) throw new Error('Missing login token in response');
       setToken(data.token);
       navigate('/admin');
     } catch (err: any) {
@@ -47,7 +49,7 @@ export default function AdminLogin() {
               <Shield size={28} className="text-white" />
             </div>
             <h1 className="text-2xl font-black text-white">Admin Access</h1>
-            <p className="text-gray-400 text-sm mt-1">Freshero 2025 Control Panel</p>
+            <p className="text-gray-400 text-sm mt-1">Ignite'26 Control Panel</p>
           </div>
 
           {error && (
@@ -61,7 +63,7 @@ export default function AdminLogin() {
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1.5">Email</label>
               <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-                placeholder="admin@freshero.edu.in"
+                placeholder="admin@ignite26.edu.in"
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500" />
             </div>
             <div>
@@ -83,7 +85,7 @@ export default function AdminLogin() {
           </form>
 
           <p className="text-center text-gray-600 text-xs mt-6">
-            Demo: admin@freshero.edu.in / admin123
+            Demo: admin@ignite26.edu.in / admin123
           </p>
         </div>
       </motion.div>

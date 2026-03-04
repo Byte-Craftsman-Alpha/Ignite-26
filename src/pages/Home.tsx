@@ -36,7 +36,7 @@ export default function Home() {
 
           <motion.p initial="hidden" animate="show" variants={fadeUp} transition={{ duration: 0.6, delay: 0.2 }}
             className="text-lg sm:text-xl text-gray-300 max-w-2xl mx-auto mb-10">
-            Welcome to the grandest fresher of the year. An event of music, dance, fashion, and unforgettable memories.
+            Welcome to Ignite'26, the grandest campus day event of the year with music, dance, fashion, and unforgettable memories.
           </motion.p>
 
           <motion.div initial="hidden" animate="show" variants={fadeUp} transition={{ duration: 0.6, delay: 0.3 }}
@@ -101,7 +101,7 @@ export default function Home() {
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
             className="text-center mb-14">
             <h2 className="text-3xl sm:text-4xl font-bold mb-3">What Awaits You</h2>
-            <p className="text-gray-400">An evening packed with talent, glamour, and celebration</p>
+            <p className="text-gray-400">A day packed with talent, glamour, and celebration</p>
           </motion.div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

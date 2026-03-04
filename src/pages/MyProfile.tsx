@@ -1,23 +1,26 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { User, Hash, Phone, CheckCircle, XCircle, Search } from 'lucide-react';
+import { getErrorMessage, readJsonSafe } from '../lib/http';
 
 interface Participant {
   id: number;
-  name: string;
-  roll_no: string;
-  branch: string;
   email: string;
-  phone: string;
-  food_pref: string;
+  full_name: string;
+  roll_number: string;
+  branch: string;
+  year: string;
+  skills: string[];
+  payment_id: string;
+  whatsapp_number: string;
   check_in_status: boolean;
   check_in_time: string | null;
   registered_at: string;
 }
 
 export default function MyProfile() {
-  const [rollNo, setRollNo] = useState('');
-  const [phone, setPhone] = useState('');
+  const [rollNumber, setRollNumber] = useState('');
+  const [whatsappNumber, setWhatsappNumber] = useState('');
   const [loading, setLoading] = useState(false);
   const [participant, setParticipant] = useState<Participant | null>(null);
   const [error, setError] = useState('');
@@ -31,13 +34,15 @@ export default function MyProfile() {
       const res = await fetch('/api/participant-lookup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roll_no: rollNo.trim(), phone: phone.trim() }),
+        body: JSON.stringify({ roll_number: rollNumber.trim(), whatsapp_number: whatsappNumber.trim() }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const data = await readJsonSafe<Participant & { error?: string }>(res);
+      if (!res.ok) throw new Error(getErrorMessage(data, 'Unable to find profile'));
+      if (!data) throw new Error('Empty response from server');
       setParticipant(data);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Lookup failed';
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -52,24 +57,24 @@ export default function MyProfile() {
               <User size={28} className="text-purple-400" />
             </div>
             <h1 className="text-4xl font-black mb-2">My Profile</h1>
-            <p className="text-gray-400">Enter your credentials to view your registration details.</p>
+            <p className="text-gray-400">Enter your roll number and WhatsApp number to view your registration.</p>
           </div>
 
           <form onSubmit={handleLookup} className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1.5">Roll Number</label>
+                <label className="block text-sm font-medium text-gray-300 mb-1.5">Complete Roll Number</label>
                 <div className="relative">
                   <Hash size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
-                  <input value={rollNo} onChange={e => setRollNo(e.target.value)} placeholder="e.g., 24-CS-01"
+                  <input value={rollNumber} onChange={e => setRollNumber(e.target.value)} placeholder="13-digit numerical roll number" maxLength={13}
                     className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500" />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1.5">Phone Number</label>
+                <label className="block text-sm font-medium text-gray-300 mb-1.5">WhatsApp Number</label>
                 <div className="relative">
                   <Phone size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
-                  <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="10-digit number" maxLength={10}
+                  <input value={whatsappNumber} onChange={e => setWhatsappNumber(e.target.value)} placeholder="10-digit WhatsApp number" maxLength={10}
                     className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500" />
                 </div>
               </div>
@@ -87,11 +92,11 @@ export default function MyProfile() {
               <div className="bg-gradient-to-r from-purple-700 to-amber-600 p-6">
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-2xl font-black">
-                    {participant.name.charAt(0)}
+                    {participant.full_name.charAt(0)}
                   </div>
                   <div>
-                    <h2 className="text-xl font-black">{participant.name}</h2>
-                    <p className="text-white/80 text-sm">{participant.roll_no} &bull; {participant.branch}</p>
+                    <h2 className="text-xl font-black">{participant.full_name}</h2>
+                    <p className="text-white/80 text-sm">{participant.roll_number} | {participant.branch}</p>
                   </div>
                 </div>
               </div>
@@ -112,13 +117,25 @@ export default function MyProfile() {
                     <span className="text-white text-sm">{new Date(participant.check_in_time).toLocaleTimeString()}</span>
                   </div>
                 )}
-                <div className="flex justify-between py-3 border-b border-white/10">
+                <div className="flex justify-between py-3 border-b border-white/10 gap-3">
                   <span className="text-gray-400 text-sm">Email</span>
-                  <span className="text-white text-sm">{participant.email}</span>
+                  <span className="text-white text-sm text-right">{participant.email}</span>
                 </div>
-                <div className="flex justify-between py-3 border-b border-white/10">
-                  <span className="text-gray-400 text-sm">Food Preference</span>
-                  <span className="text-white text-sm capitalize">{participant.food_pref}</span>
+                <div className="flex justify-between py-3 border-b border-white/10 gap-3">
+                  <span className="text-gray-400 text-sm">Year</span>
+                  <span className="text-white text-sm text-right">{participant.year}</span>
+                </div>
+                <div className="flex justify-between py-3 border-b border-white/10 gap-3">
+                  <span className="text-gray-400 text-sm">Skills</span>
+                  <span className="text-white text-sm text-right">{Array.isArray(participant.skills) ? participant.skills.join(', ') : ''}</span>
+                </div>
+                <div className="flex justify-between py-3 border-b border-white/10 gap-3">
+                  <span className="text-gray-400 text-sm">Payment ID</span>
+                  <span className="text-white text-sm text-right">{participant.payment_id}</span>
+                </div>
+                <div className="flex justify-between py-3 border-b border-white/10 gap-3">
+                  <span className="text-gray-400 text-sm">WhatsApp</span>
+                  <span className="text-white text-sm text-right">{participant.whatsapp_number}</span>
                 </div>
                 <div className="flex justify-between py-3">
                   <span className="text-gray-400 text-sm">Registered On</span>

@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Upload, Trash2, Image, ArrowLeft, Plus, X } from 'lucide-react';
 import { authHeaders } from '../../lib/auth';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import { getErrorMessage, readJsonSafe } from '../../lib/http';
 
 interface MediaItem {
   id: number;
@@ -26,8 +27,8 @@ export default function MediaUpload() {
   const fetchMedia = async () => {
     try {
       const res = await fetch('/api/media', { headers: authHeaders() });
-      const data = await res.json();
-      setMedia(data);
+      const data = await readJsonSafe<MediaItem[]>(res);
+      setMedia(Array.isArray(data) ? data : []);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
@@ -45,8 +46,8 @@ export default function MediaUpload() {
         headers: authHeaders(),
         body: JSON.stringify(form),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const data = await readJsonSafe<{ error?: string }>(res);
+      if (!res.ok) throw new Error(getErrorMessage(data, 'Failed to add media'));
       setForm({ url: '', caption: '', type: 'image', category: 'general' });
       setShowForm(false);
       fetchMedia();

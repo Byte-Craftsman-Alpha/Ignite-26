@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Crown, Trophy, Star } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { readJsonSafe } from '../lib/http';
 
 interface Winner {
   id: number;
@@ -36,10 +37,18 @@ export default function HallOfFame() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/winners')
-      .then(r => r.json())
-      .then(data => { setWinners(data); setLoading(false); })
-      .catch(() => setLoading(false));
+    const fetchWinners = async () => {
+      try {
+        const res = await fetch('/api/winners');
+        const data = await readJsonSafe<Winner[]>(res);
+        setWinners(Array.isArray(data) ? data : []);
+      } catch {
+        setWinners([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchWinners();
   }, []);
 
   const topTwo = winners.filter(w => w.award_title === 'Mr. Fresher' || w.award_title === 'Ms. Fresher');
@@ -58,7 +67,7 @@ export default function HallOfFame() {
               <h1 className="text-5xl sm:text-6xl font-black bg-gradient-to-r from-amber-400 to-yellow-200 bg-clip-text text-transparent">Hall of Fame</h1>
               <Trophy className="text-amber-400" size={32} />
             </div>
-            <p className="text-gray-400 text-lg">The stars of Freshero 2025</p>
+            <p className="text-gray-400 text-lg">The stars of Ignite'26</p>
           </motion.div>
         </div>
       </div>

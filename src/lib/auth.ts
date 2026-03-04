@@ -1,6 +1,8 @@
-export const getToken = () => localStorage.getItem('freshero_admin_token');
-export const setToken = (token: string) => localStorage.setItem('freshero_admin_token', token);
-export const removeToken = () => localStorage.removeItem('freshero_admin_token');
+import { readJsonSafe } from './http';
+
+export const getToken = () => localStorage.getItem('ignite26_admin_token');
+export const setToken = (token: string) => localStorage.setItem('ignite26_admin_token', token);
+export const removeToken = () => localStorage.removeItem('ignite26_admin_token');
 
 export const authHeaders = () => ({
   'Content-Type': 'application/json',
@@ -13,8 +15,8 @@ export async function checkAdminAuth(): Promise<{ id: number; email: string } | 
   try {
     const res = await fetch('/api/auth/me', { headers: authHeaders() });
     if (!res.ok) { removeToken(); return null; }
-    const { user } = await res.json();
-    return user;
+    const payload = await readJsonSafe<{ user?: { id: number; email: string } }>(res);
+    return payload?.user ?? null;
   } catch {
     return null;
   }

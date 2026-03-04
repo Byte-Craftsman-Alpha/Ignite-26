@@ -4,15 +4,17 @@ import { motion } from 'framer-motion';
 import { Users, UserCheck, Search, CheckCircle, XCircle, Upload, Trophy, RefreshCw, ChevronDown } from 'lucide-react';
 import { authHeaders } from '../../lib/auth';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import { readJsonSafe } from '../../lib/http';
 
 interface Participant {
   id: number;
-  name: string;
-  roll_no: string;
+  full_name: string;
+  roll_number: string;
   branch: string;
   email: string;
-  phone: string;
-  food_pref: string;
+  year: string;
+  whatsapp_number: string;
+  skills: string[];
   check_in_status: boolean;
   check_in_time: string | null;
   registered_at: string;
@@ -23,7 +25,7 @@ interface Stats {
   checkedIn: number;
   notCheckedIn: number;
   branchCounts: Record<string, number>;
-  foodCounts: Record<string, number>;
+  yearCounts: Record<string, number>;
 }
 
 export default function AdminDashboard() {
@@ -44,11 +46,11 @@ export default function AdminDashboard() {
         fetch(`/api/participants?${params}`, { headers: authHeaders() }),
         fetch('/api/stats', { headers: authHeaders() }),
       ]);
-      const pData = await pRes.json();
-      const sData = await sRes.json();
-      setParticipants(pData);
-      setStats(sData);
-      if (!branches.length && sData.branchCounts) setBranches(Object.keys(sData.branchCounts));
+      const pData = await readJsonSafe<Participant[]>(pRes);
+      const sData = await readJsonSafe<Stats>(sRes);
+      setParticipants(Array.isArray(pData) ? pData : []);
+      setStats(sData ?? null);
+      if (!branches.length && sData?.branchCounts) setBranches(Object.keys(sData.branchCounts));
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   }, [search, branch]);
@@ -77,7 +79,7 @@ export default function AdminDashboard() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-black">Admin Dashboard</h1>
-            <p className="text-gray-400 text-sm mt-1">Freshero 2025 &mdash; Check-in Management</p>
+            <p className="text-gray-400 text-sm mt-1">Ignite'26 &mdash; Check-in Management</p>
           </div>
           <div className="flex gap-3">
             <Link to="/admin/upload" className="px-4 py-2 rounded-xl bg-purple-600/20 border border-purple-500/30 text-purple-300 text-sm flex items-center gap-2 hover:bg-purple-600/30 transition-colors">
@@ -183,7 +185,7 @@ export default function AdminDashboard() {
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Participant</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider hidden sm:table-cell">Roll No</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider hidden md:table-cell">Branch</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider hidden lg:table-cell">Food</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider hidden lg:table-cell">Year</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Status</th>
                     <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Action</th>
                   </tr>
@@ -194,22 +196,22 @@ export default function AdminDashboard() {
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-amber-500 flex items-center justify-center text-xs font-bold flex-shrink-0">
-                            {p.name.charAt(0)}
+                            {p.full_name.charAt(0)}
                           </div>
                           <div>
-                            <p className="font-medium text-white text-sm">{p.name}</p>
+                            <p className="font-medium text-white text-sm">{p.full_name}</p>
                             <p className="text-gray-500 text-xs">{p.email}</p>
                           </div>
                         </div>
                       </td>
                       <td className="px-4 py-3 hidden sm:table-cell">
-                        <span className="font-mono text-sm text-gray-300">{p.roll_no}</span>
+                        <span className="font-mono text-sm text-gray-300">{p.roll_number}</span>
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell">
                         <span className="px-2 py-1 rounded-lg bg-purple-500/10 text-purple-300 text-xs font-medium">{p.branch}</span>
                       </td>
                       <td className="px-4 py-3 hidden lg:table-cell">
-                        <span className="text-gray-400 text-sm capitalize">{p.food_pref}</span>
+                        <span className="text-gray-400 text-sm">{p.year}</span>
                       </td>
                       <td className="px-4 py-3">
                         {p.check_in_status ? (

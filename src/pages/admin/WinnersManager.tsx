@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Trophy, Plus, Trash2, ArrowLeft, X, Crown } from 'lucide-react';
 import { authHeaders } from '../../lib/auth';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import { getErrorMessage, readJsonSafe } from '../../lib/http';
 
 interface Winner {
   id: number;
@@ -17,8 +18,8 @@ interface Winner {
 
 interface Participant {
   id: number;
-  name: string;
-  roll_no: string;
+  full_name: string;
+  roll_number: string;
   branch: string;
 }
 
@@ -41,8 +42,10 @@ export default function WinnersManager() {
         fetch('/api/winners', { headers: authHeaders() }),
         fetch('/api/participants', { headers: authHeaders() }),
       ]);
-      setWinners(await wRes.json());
-      setParticipants(await pRes.json());
+      const winnersData = await readJsonSafe<Winner[]>(wRes);
+      const participantsData = await readJsonSafe<Participant[]>(pRes);
+      setWinners(Array.isArray(winnersData) ? winnersData : []);
+      setParticipants(Array.isArray(participantsData) ? participantsData : []);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
@@ -51,7 +54,7 @@ export default function WinnersManager() {
 
   const handleParticipantSelect = (id: string) => {
     const p = participants.find(p => String(p.id) === id);
-    if (p) setForm(f => ({ ...f, participant_id: id, name: p.name, roll_no: p.roll_no, branch: p.branch }));
+    if (p) setForm(f => ({ ...f, participant_id: id, name: p.full_name, roll_no: p.roll_number, branch: p.branch }));
     else setForm(f => ({ ...f, participant_id: id }));
   };
 
@@ -67,8 +70,8 @@ export default function WinnersManager() {
         headers: authHeaders(),
         body: JSON.stringify({ ...form, award_title: awardTitle }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const data = await readJsonSafe<{ error?: string }>(res);
+      if (!res.ok) throw new Error(getErrorMessage(data, 'Failed to add winner'));
       setForm({ participant_id: '', name: '', roll_no: '', branch: '', award_title: '', image_url: '', description: '' });
       setShowForm(false);
       fetchData();
@@ -113,7 +116,7 @@ export default function WinnersManager() {
                 <select value={form.participant_id} onChange={e => handleParticipantSelect(e.target.value)}
                   className="w-full bg-[#1a1530] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500">
                   <option value="">-- Select participant --</option>
-                  {participants.map(p => <option key={p.id} value={p.id}>{p.name} ({p.roll_no})</option>)}
+                  {participants.map(p => <option key={p.id} value={p.id}>{p.full_name} ({p.roll_number})</option>)}
                 </select>
               </div>
               <div>

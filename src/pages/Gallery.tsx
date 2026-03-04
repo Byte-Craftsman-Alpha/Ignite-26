@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Image, Filter } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { readJsonSafe } from '../lib/http';
 
 interface MediaItem {
   id: number;
@@ -21,8 +22,8 @@ export default function Gallery() {
   const fetchMedia = async () => {
     try {
       const res = await fetch(`/api/media${filter !== 'all' ? `?category=${filter}` : ''}`);
-      const data = await res.json();
-      setMedia(data);
+      const data = await readJsonSafe<MediaItem[]>(res);
+      setMedia(Array.isArray(data) ? data : []);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
@@ -43,7 +44,7 @@ export default function Gallery() {
             <Image size={14} /> Media Hub
           </span>
           <h1 className="text-4xl sm:text-5xl font-black mb-3">Gallery</h1>
-          <p className="text-gray-400">Relive the magic of Freshero 2025</p>
+          <p className="text-gray-400">Relive the magic of Ignite'26</p>
         </motion.div>
 
         {/* Filters */}

@@ -51,6 +51,10 @@ The serverless API layer expects these variables:
 - `SUPABASE_DB_SCHEMA`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
+## Participants Schema Migration
+
+To apply the updated registration schema, run `database/participants_schema_update.sql` in the Supabase SQL editor.
+
 ## Current Status (checked on March 4, 2026)
 
 Commands executed:
