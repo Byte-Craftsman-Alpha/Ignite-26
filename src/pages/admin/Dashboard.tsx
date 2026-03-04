@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -15,6 +15,8 @@ import {
   Trash2,
   ShieldCheck,
   X,
+  Download,
+  FileUp,
 } from 'lucide-react';
 import { authHeaders } from '../../lib/auth';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -90,6 +92,10 @@ export default function AdminDashboard() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [editError, setEditError] = useState('');
+  const [transferLoading, setTransferLoading] = useState<'csv' | 'xlsx' | 'import' | null>(null);
+  const [transferMessage, setTransferMessage] = useState('');
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -210,6 +216,91 @@ export default function AdminDashboard() {
 
   const checkinPct = stats ? Math.round((stats.checkedIn / (stats.total || 1)) * 100) : 0;
 
+  const downloadBlob = (blob: Blob, fallbackName: string, contentDisposition: string | null) => {
+    const match = contentDisposition?.match(/filename=\"?([^\"]+)\"?/i);
+    const fileName = match?.[1] || fallbackName;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExport = async (format: 'csv' | 'xlsx') => {
+    setTransferLoading(format);
+    setTransferMessage('');
+    try {
+      const res = await fetch(`/api/participants-transfer?format=${format}`, {
+        method: 'GET',
+        headers: authHeaders(),
+      });
+      if (!res.ok) {
+        const data = await readJsonSafe<{ error?: string }>(res);
+        throw new Error(getErrorMessage(data, 'Failed to export registrations'));
+      }
+      const blob = await res.blob();
+      downloadBlob(blob, `ignite26-participants.${format}`, res.headers.get('content-disposition'));
+      setTransferMessage(`Exported registrations as ${format.toUpperCase()}.`);
+    } catch (err) {
+      setTransferMessage(err instanceof Error ? err.message : 'Failed to export registrations');
+    } finally {
+      setTransferLoading(null);
+      setExportMenuOpen(false);
+    }
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const readFileAsDataUrl = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    });
+
+  const handleImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    event.target.value = '';
+
+    const lower = file.name.toLowerCase();
+    if (!lower.endsWith('.csv') && !lower.endsWith('.xlsx') && !lower.endsWith('.xls')) {
+      setTransferMessage('Please select a CSV or Excel file (.csv, .xlsx, .xls).');
+      return;
+    }
+
+    setTransferLoading('import');
+    setTransferMessage('');
+    try {
+      const fileDataUrl = await readFileAsDataUrl(file);
+      const res = await fetch('/api/participants-transfer', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({
+          file_name: file.name,
+          file_data_url: fileDataUrl,
+        }),
+      });
+      const data = await readJsonSafe<{ error?: string; total?: number; created?: number; updated?: number; failed_count?: number }>(res);
+      if (!res.ok) throw new Error(getErrorMessage(data, 'Failed to import registrations'));
+
+      setTransferMessage(
+        `Imported ${data?.total ?? 0} rows: ${data?.created ?? 0} created, ${data?.updated ?? 0} updated, ${data?.failed_count ?? 0} failed.`
+      );
+      fetchData();
+    } catch (err) {
+      setTransferMessage(err instanceof Error ? err.message : 'Failed to import registrations');
+    } finally {
+      setTransferLoading(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#050510] grid-bg text-white pt-20 pb-16">
       <div className="max-w-7xl mx-auto px-4">
@@ -228,11 +319,54 @@ export default function AdminDashboard() {
             <Link to="/admin/winners" className="px-4 py-2 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-300 text-sm flex items-center gap-2 hover:bg-amber-500/30 transition-colors">
               <Trophy size={16} /> Winners
             </Link>
+            <div className="relative">
+              <button
+                onClick={() => setExportMenuOpen(prev => !prev)}
+                disabled={transferLoading !== null}
+                className="px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-sm flex items-center gap-2 hover:bg-emerald-500/30 transition-colors disabled:opacity-50"
+              >
+                <Download size={16} />
+                {transferLoading === 'csv' || transferLoading === 'xlsx' ? 'Exporting...' : 'Export'}
+                <ChevronDown size={14} className={`transition-transform ${exportMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {exportMenuOpen && (
+                <div className="absolute right-0 mt-2 w-44 rounded-xl border border-[#1e1e3f] bg-[#0d0d1f]/95 backdrop-blur-sm shadow-xl z-20 overflow-hidden">
+                  <button
+                    onClick={() => handleExport('csv')}
+                    className="w-full px-4 py-2.5 text-left text-sm text-emerald-300 hover:bg-emerald-500/10 transition-colors"
+                  >
+                    Export as CSV
+                  </button>
+                  <button
+                    onClick={() => handleExport('xlsx')}
+                    className="w-full px-4 py-2.5 text-left text-sm text-cyan-300 hover:bg-cyan-500/10 transition-colors border-t border-white/5"
+                  >
+                    Export as Excel
+                  </button>
+                </div>
+              )}
+            </div>
+            <button
+              onClick={handleImportClick}
+              disabled={transferLoading !== null}
+              className="px-4 py-2 rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-sm flex items-center gap-2 hover:bg-indigo-500/30 transition-colors disabled:opacity-50"
+            >
+              <FileUp size={16} /> {transferLoading === 'import' ? 'Importing...' : 'Import CSV/Excel'}
+            </button>
             <button onClick={fetchData} className="px-4 py-2 rounded-xl bg-[#0d0d1f]/90 border border-[#1e1e3f] text-gray-400 text-sm flex items-center gap-2 hover:bg-white/10 transition-colors">
               <RefreshCw size={16} /> Refresh
             </button>
           </div>
         </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv,.xlsx,.xls"
+          className="hidden"
+          onChange={handleImportFile}
+        />
+        {transferMessage && <p className="mb-5 text-sm text-gray-300">{transferMessage}</p>}
 
         {stats && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
