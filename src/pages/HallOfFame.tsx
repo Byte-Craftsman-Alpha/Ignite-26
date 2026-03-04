@@ -15,6 +15,8 @@ interface Winner {
 }
 
 const AWARD_ICONS: Record<string, string> = {
+  'Mr. IGNITE': '👑',
+  'Ms. IGNITE': '👸',
   'Mr. Fresher': 'ðŸ‘‘',
   'Ms. Fresher': 'ðŸ‘¸',
   'Best Dancer': 'ðŸ’ƒ',
@@ -24,6 +26,8 @@ const AWARD_ICONS: Record<string, string> = {
 };
 
 const AWARD_COLORS: Record<string, string> = {
+  'Mr. IGNITE': 'from-amber-500 to-yellow-300',
+  'Ms. IGNITE': 'from-pink-500 to-rose-300',
   'Mr. Fresher': 'from-amber-500 to-yellow-300',
   'Ms. Fresher': 'from-pink-500 to-rose-300',
   'Best Dancer': 'from-purple-500 to-violet-300',
@@ -51,8 +55,9 @@ export default function HallOfFame() {
     fetchWinners();
   }, []);
 
-  const topTwo = winners.filter(w => w.award_title === 'Mr. Fresher' || w.award_title === 'Ms. Fresher');
-  const rest = winners.filter(w => w.award_title !== 'Mr. Fresher' && w.award_title !== 'Ms. Fresher');
+  const featuredAwards = new Set(['Mr. IGNITE', 'Ms. IGNITE', 'Mr. Fresher', 'Ms. Fresher']);
+  const topTwo = winners.filter(w => featuredAwards.has(w.award_title));
+  const rest = winners.filter(w => !featuredAwards.has(w.award_title));
 
   return (
     <div className="min-h-screen bg-[#050510] grid-bg text-white pt-20 pb-16">

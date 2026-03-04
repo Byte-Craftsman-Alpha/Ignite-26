@@ -169,6 +169,26 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="py-12 px-4 relative z-10">
+        <div className="max-w-4xl mx-auto">
+          <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-6">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-2">Dress Code</h2>
+            <p className="text-gray-400">Come dressed to match the Ignite'26 vibe.</p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="p-5 rounded-2xl border border-cyan-500/30 bg-cyan-500/10">
+              <p className="text-xs text-cyan-300 uppercase tracking-wider mb-1">For Boys / Male</p>
+              <p className="text-xl font-bold text-white">Formals</p>
+            </motion.div>
+            <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.06 }} className="p-5 rounded-2xl border border-pink-500/30 bg-pink-500/10">
+              <p className="text-xs text-pink-300 uppercase tracking-wider mb-1">For Girls / Ladies</p>
+              <p className="text-xl font-bold text-white">Western Wear</p>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
       <section className="py-16 px-4 relative z-10">
         <div className="max-w-6xl mx-auto">
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-14">

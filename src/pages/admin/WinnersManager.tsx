@@ -23,7 +23,7 @@ interface Participant {
   branch: string;
 }
 
-const AWARDS = ['Mr. Fresher', 'Ms. Fresher', 'Best Dancer', 'Best Singer', 'Most Talented', 'Mr. Personality', 'Ms. Personality', 'Best Dressed', 'Funniest Fresher', 'Custom...'];
+const AWARDS = ['Mr. IGNITE', 'Ms. IGNITE', 'Best Dancer', 'Best Singer', 'Most Talented', 'Mr. Personality', 'Ms. Personality', 'Best Dressed', 'Funniest Fresher', 'Custom...'];
 
 export default function WinnersManager() {
   const [winners, setWinners] = useState<Winner[]>([]);
