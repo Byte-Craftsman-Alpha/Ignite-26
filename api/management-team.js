@@ -1,6 +1,7 @@
 import db, { encodeRoles, toManagementMember } from './_db.js';
 import { requireAdmin } from './_auth.js';
 import { writeActivity } from './_activity.js';
+import { getDataUrlImageDimensions } from './_image-dimensions.js';
 
 function validate(payload) {
   const { name, branch, year, roles, fields, whatsapp_number, profile_image } = payload;
@@ -9,9 +10,14 @@ function validate(payload) {
   if (!/^\d{10}$/.test(String(whatsapp_number))) return 'WhatsApp number must be exactly 10 digits';
   if (profile_image) {
     const image = String(profile_image);
-    const allowedPrefix = image.startsWith('data:image/') || image.startsWith('http://') || image.startsWith('https://');
-    if (!allowedPrefix) return 'Invalid profile image format';
+    if (!image.startsWith('data:image/')) return 'Invalid profile image format';
     if (image.length > 900000) return 'Profile image is too large';
+    try {
+      const { width, height } = getDataUrlImageDimensions(image);
+      if (width !== height) return 'Profile photo must be 1:1 (square ratio)';
+    } catch (err) {
+      return err instanceof Error ? err.message : 'Invalid profile image data';
+    }
   }
   return null;
 }

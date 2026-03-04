@@ -26,6 +26,12 @@ function actionLabel(action: string): string {
     management_member_deleted: 'Team Member Removed',
     payment_verified: 'Payment Verified',
     payment_unverified: 'Payment Unverified',
+    media_added_by_admin: 'Media Added By Admin',
+    media_submitted_public: 'Media Submitted By Public',
+    media_approved: 'Media Approved',
+    media_rejected: 'Media Rejected',
+    media_marked_pending: 'Media Marked Pending',
+    media_deleted: 'Media Deleted',
   };
   return labels[action] || action;
 }

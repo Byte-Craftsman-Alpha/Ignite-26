@@ -28,7 +28,6 @@ interface MemberForm {
 
 const BRANCHES = ['CSE Core', 'CSE AI/ML', 'IT', 'ECE', 'ME'];
 const YEARS = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
-const PREVIEW_SIZE = 176;
 
 function getInitials(name: string): string {
   const parts = name
@@ -87,50 +86,6 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-function getOffsetBounds(imageWidth: number, imageHeight: number, zoom: number, frameSize: number) {
-  const baseScale = Math.max(frameSize / imageWidth, frameSize / imageHeight);
-  const scale = baseScale * zoom;
-  const drawWidth = imageWidth * scale;
-  const drawHeight = imageHeight * scale;
-
-  return {
-    maxX: Math.max((drawWidth - frameSize) / 2, 0),
-    maxY: Math.max((drawHeight - frameSize) / 2, 0),
-  };
-}
-
-function clampOffsets(offsetX: number, offsetY: number, imageWidth: number, imageHeight: number, zoom: number, frameSize: number) {
-  const { maxX, maxY } = getOffsetBounds(imageWidth, imageHeight, zoom, frameSize);
-  return {
-    x: Math.min(Math.max(offsetX, -maxX), maxX),
-    y: Math.min(Math.max(offsetY, -maxY), maxY),
-  };
-}
-
-async function renderSquareCrop(src: string, zoom: number, offsetX: number, offsetY: number): Promise<string> {
-  const img = await loadImage(src);
-  const canvas = document.createElement('canvas');
-  const size = 512;
-  canvas.width = size;
-  canvas.height = size;
-
-  const context = canvas.getContext('2d');
-  if (!context) throw new Error('Failed to create canvas context');
-
-  const baseScale = Math.max(size / img.width, size / img.height);
-  const scale = baseScale * zoom;
-  const drawWidth = img.width * scale;
-  const drawHeight = img.height * scale;
-  const dx = (size - drawWidth) / 2 + offsetX;
-  const dy = (size - drawHeight) / 2 + offsetY;
-
-  context.fillStyle = '#111827';
-  context.fillRect(0, 0, size, size);
-  context.drawImage(img, dx, dy, drawWidth, drawHeight);
-
-  return canvas.toDataURL('image/jpeg', 0.9);
-}
-
 export default function ManagementTeamAdmin() {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -138,16 +93,8 @@ export default function ManagementTeamAdmin() {
   const [editing, setEditing] = useState<TeamMember | null>(null);
   const [form, setForm] = useState<MemberForm>(toForm());
   const [profileImage, setProfileImage] = useState('');
-  const [imageSource, setImageSource] = useState('');
-  const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null);
-  const [imageDirty, setImageDirty] = useState(false);
-  const [zoom, setZoom] = useState(1);
-  const [offsetX, setOffsetX] = useState(0);
-  const [offsetY, setOffsetY] = useState(0);
-  const [dragStart, setDragStart] = useState<{ x: number; y: number; baseX: number; baseY: number } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState<number | null>(null);
-  const [processingImage, setProcessingImage] = useState(false);
   const [error, setError] = useState('');
 
   const fetchMembers = async () => {
@@ -166,50 +113,26 @@ export default function ManagementTeamAdmin() {
     fetchMembers();
   }, []);
 
-  const resetCropState = () => {
-    setZoom(1);
-    setOffsetX(0);
-    setOffsetY(0);
-    setDragStart(null);
-    setImageDirty(false);
-    setImageSize(null);
-  };
-
   const openCreate = () => {
     setEditing(null);
     setForm(toForm());
     setProfileImage('');
-    setImageSource('');
-    resetCropState();
     setShowForm(true);
     setError('');
   };
 
-  const openEdit = async (member: TeamMember) => {
+  const openEdit = (member: TeamMember) => {
     setEditing(member);
     setForm(toForm(member));
     setProfileImage(member.profile_image || '');
-    setImageSource(member.profile_image || '');
-    resetCropState();
     setShowForm(true);
     setError('');
-
-    if (member.profile_image) {
-      try {
-        const img = await loadImage(member.profile_image);
-        setImageSize({ width: img.width, height: img.height });
-      } catch {
-        setImageSize(null);
-      }
-    }
   };
 
   const closeForm = () => {
     setEditing(null);
     setForm(toForm());
     setProfileImage('');
-    setImageSource('');
-    resetCropState();
     setShowForm(false);
     setError('');
   };
@@ -226,55 +149,22 @@ export default function ManagementTeamAdmin() {
     try {
       setError('');
       const source = await readFileAsDataUrl(file);
-      const img = await loadImage(source);
-      setImageSource(source);
-      setImageSize({ width: img.width, height: img.height });
-      setProfileImage('');
-      setZoom(1);
-      setOffsetX(0);
-      setOffsetY(0);
-      setDragStart(null);
-      setImageDirty(true);
+      const image = await loadImage(source);
+
+      if (image.width !== image.height) {
+        setError('Only 1:1 ratio images are allowed for profile photos.');
+        event.currentTarget.value = '';
+        return;
+      }
+
+      setProfileImage(source);
     } catch {
       setError('Failed to read image file');
     }
   };
 
-  const handleZoomChange = (nextZoom: number) => {
-    setZoom(nextZoom);
-    if (imageSize) {
-      const clamped = clampOffsets(offsetX, offsetY, imageSize.width, imageSize.height, nextZoom, PREVIEW_SIZE);
-      setOffsetX(clamped.x);
-      setOffsetY(clamped.y);
-    }
-    if (imageSource) setImageDirty(true);
-  };
-
-  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (!imageSource || !imageSize) return;
-    setDragStart({ x: event.clientX, y: event.clientY, baseX: offsetX, baseY: offsetY });
-  };
-
-  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (!dragStart || !imageSource || !imageSize) return;
-
-    const rawX = dragStart.baseX + (event.clientX - dragStart.x);
-    const rawY = dragStart.baseY + (event.clientY - dragStart.y);
-    const clamped = clampOffsets(rawX, rawY, imageSize.width, imageSize.height, zoom, PREVIEW_SIZE);
-
-    setOffsetX(clamped.x);
-    setOffsetY(clamped.y);
-    setImageDirty(true);
-  };
-
-  const handlePointerUp = () => {
-    setDragStart(null);
-  };
-
   const clearPhoto = () => {
-    setImageSource('');
     setProfileImage('');
-    resetCropState();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -283,18 +173,10 @@ export default function ManagementTeamAdmin() {
     setError('');
 
     try {
-      let finalProfile = profileImage;
-
-      if (imageSource && (imageDirty || !profileImage)) {
-        setProcessingImage(true);
-        finalProfile = await renderSquareCrop(imageSource, zoom, offsetX, offsetY);
-        setProcessingImage(false);
-      }
-
       const payload = {
         ...form,
         roles: parseRoles(form.roles),
-        profile_image: finalProfile,
+        profile_image: profileImage,
       };
 
       const res = await fetch('/api/management-team', {
@@ -310,7 +192,6 @@ export default function ManagementTeamAdmin() {
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to save member');
     } finally {
-      setProcessingImage(false);
       setSubmitting(false);
     }
   };
@@ -367,73 +248,27 @@ export default function ManagementTeamAdmin() {
             <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-[220px_1fr] gap-5 p-4 rounded-2xl border border-white/10 bg-white/[0.02]">
                 <div className="flex flex-col items-center">
-                  <div
-                    className="w-44 h-44 rounded-2xl border border-white/20 overflow-hidden bg-[#0e0a1f] relative cursor-move select-none touch-none"
-                    onPointerDown={handlePointerDown}
-                    onPointerMove={handlePointerMove}
-                    onPointerUp={handlePointerUp}
-                    onPointerLeave={handlePointerUp}
-                  >
-                    {imageSource ? (
-                      <img
-                        src={imageSource}
-                        alt="Crop preview"
-                        draggable={false}
-                        className="absolute top-1/2 left-1/2 max-w-none pointer-events-none"
-                        style={{
-                          transform: `translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px)) scale(${zoom})`,
-                          transformOrigin: 'center center',
-                        }}
-                      />
-                    ) : profileImage ? (
+                  <div className="w-44 h-44 rounded-2xl border border-white/20 overflow-hidden bg-[#0e0a1f] relative">
+                    {profileImage ? (
                       <img src={profileImage} alt="Profile preview" className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-2xl font-bold text-indigo-200 bg-gradient-to-br from-indigo-600/50 to-purple-600/40">
                         {getInitials(form.name || 'TM')}
                       </div>
                     )}
-                    <div className="absolute inset-0 border border-white/30 pointer-events-none" />
                   </div>
                   <label className="mt-3 w-full">
                     <input type="file" accept="image/*" className="hidden" onChange={handleImagePick} />
                     <span className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm bg-indigo-600/20 border border-indigo-500/30 text-indigo-200 hover:bg-indigo-600/30 cursor-pointer">
-                      <ImageUp size={14} /> Upload Photo
+                      <ImageUp size={14} /> Upload 1:1 Photo
                     </span>
                   </label>
                   <button type="button" onClick={clearPhoto} className="mt-2 text-xs text-gray-400 hover:text-white">Remove photo</button>
                 </div>
 
                 <div className="space-y-3">
-                  <p className="text-sm text-gray-300">Drag photo to reposition inside the 1:1 frame.</p>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">Zoom</label>
-                    <input
-                      type="range"
-                      min={1}
-                      max={3}
-                      step={0.01}
-                      value={zoom}
-                      onChange={e => handleZoomChange(Number(e.target.value))}
-                      className="w-full"
-                      disabled={!imageSource}
-                    />
-                  </div>
-                  <div className="flex gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setZoom(1);
-                        setOffsetX(0);
-                        setOffsetY(0);
-                        if (imageSource) setImageDirty(true);
-                      }}
-                      disabled={!imageSource}
-                      className="px-4 py-2 rounded-xl text-sm bg-white/10 border border-white/20 text-gray-200 hover:bg-white/15 disabled:opacity-50"
-                    >
-                      Reset Frame
-                    </button>
-                  </div>
-                  <p className="text-xs text-gray-500">Crop is applied automatically when you save.</p>
+                  <p className="text-sm text-gray-300">Only square (1:1 ratio) images are accepted for profile photos.</p>
+                  <p className="text-xs text-gray-500">Recommended size: 512x512 or 1024x1024.</p>
                 </div>
               </div>
 
@@ -473,8 +308,8 @@ export default function ManagementTeamAdmin() {
               {error && <p className="md:col-span-2 text-red-400 text-sm">{error}</p>}
 
               <div className="md:col-span-2">
-                <button type="submit" disabled={submitting || processingImage} className="px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-500 text-white font-bold hover:opacity-90 transition-opacity disabled:opacity-50">
-                  {processingImage ? 'Processing Photo...' : submitting ? 'Saving...' : editing ? 'Update Member' : 'Add Member'}
+                <button type="submit" disabled={submitting} className="px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-500 text-white font-bold hover:opacity-90 transition-opacity disabled:opacity-50">
+                  {submitting ? 'Saving...' : editing ? 'Update Member' : 'Add Member'}
                 </button>
               </div>
             </form>

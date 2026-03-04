@@ -40,6 +40,7 @@ export default async function handler(req, res) {
       const admin = getAdminFromRequest(req);
       const {
         url,
+        thumb_url,
         caption,
         type,
         category,
@@ -70,10 +71,11 @@ export default async function handler(req, res) {
 
       const status = admin ? 'approved' : 'pending';
       const uploadedBy = admin ? admin.email : 'public';
+      const mediaThumb = String(thumb_url || '').trim();
 
       const result = db
         .prepare('INSERT INTO media (url, thumb_url, caption, type, category, status, uploaded_by) VALUES (?, ?, ?, ?, ?, ?, ?)')
-        .run(mediaUrl, thumbUrl || mediaUrl, caption || '', type, category, status, uploadedBy);
+        .run(mediaUrl, thumbUrl || mediaThumb || mediaUrl, caption || '', type, category, status, uploadedBy);
 
       const row = db.prepare('SELECT * FROM media WHERE id = ?').get(result.lastInsertRowid);
 

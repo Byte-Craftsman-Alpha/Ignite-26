@@ -32,6 +32,7 @@ export default function Navbar() {
     { to: '/', label: 'Home' },
     { to: '/register', label: 'Register' },
     { to: '/gallery', label: 'Gallery' },
+    { to: '/upload-media', label: 'Upload Media' },
     { to: '/hall-of-fame', label: 'Hall of Fame' },
     { to: '/management-team', label: 'Management Team' },
     { to: '/my-profile', label: 'My Profile' },

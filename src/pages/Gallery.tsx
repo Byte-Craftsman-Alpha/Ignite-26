@@ -7,6 +7,7 @@ import { readJsonSafe } from '../lib/http';
 interface MediaItem {
   id: number;
   url: string;
+  thumb_url: string;
   caption: string;
   type: string;
   category: string;
@@ -73,8 +74,16 @@ export default function Gallery() {
               <motion.div key={item.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.05 }}
                 className="break-inside-avoid mb-4 group cursor-pointer relative overflow-hidden rounded-2xl"
                 onClick={() => setLightbox(item)}>
-                <img src={item.url} alt={item.caption}
-                  className="w-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                {item.type === 'video' ? (
+                  <div className="relative">
+                    <img src={item.thumb_url || item.url} alt={item.caption || 'Video preview'}
+                      className="w-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <div className="absolute top-3 left-3 px-2 py-1 rounded-full bg-black/65 text-white text-xs">Video</div>
+                  </div>
+                ) : (
+                  <img src={item.thumb_url || item.url} alt={item.caption}
+                    className="w-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                   <div className="absolute bottom-0 left-0 right-0 p-4">
                     <p className="text-white text-sm font-medium">{item.caption}</p>
@@ -97,7 +106,11 @@ export default function Gallery() {
             onClick={() => setLightbox(null)}>
             <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
               className="relative max-w-4xl max-h-[85vh]" onClick={e => e.stopPropagation()}>
-              <img src={lightbox.url} alt={lightbox.caption} className="max-h-[80vh] rounded-2xl object-contain" />
+              {lightbox.type === 'video' ? (
+                <video src={lightbox.url} poster={lightbox.thumb_url || undefined} controls autoPlay className="max-h-[80vh] rounded-2xl object-contain" />
+              ) : (
+                <img src={lightbox.url} alt={lightbox.caption} className="max-h-[80vh] rounded-2xl object-contain" />
+              )}
               <button onClick={() => setLightbox(null)}
                 className="absolute top-3 right-3 w-9 h-9 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70">
                 <X size={18} />
