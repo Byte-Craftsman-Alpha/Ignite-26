@@ -39,6 +39,14 @@ const FLOW = [
   { time: '18:30', title: 'Crown Ceremony', desc: 'Final results, awards and celebration set.' },
 ];
 
+const FLOATING_ICONS = [
+  { icon: Sparkles, className: 'top-[16%] left-[8%] hidden md:flex', delay: 0.1, duration: 5.5 },
+  { icon: Camera, className: 'top-[30%] right-[10%] hidden md:flex', delay: 0.4, duration: 6.2 },
+  { icon: Mic2, className: 'top-[62%] left-[12%] hidden lg:flex', delay: 0.7, duration: 5.8 },
+  { icon: Star, className: 'top-[70%] right-[14%] hidden md:flex', delay: 1, duration: 6.5 },
+  { icon: PartyPopper, className: 'top-[46%] left-[4%] hidden xl:flex', delay: 1.2, duration: 7.1 },
+];
+
 export default function Home() {
   const [showSplash, setShowSplash] = useState(false);
 
@@ -60,12 +68,25 @@ export default function Home() {
     <div className="min-h-screen bg-[#050510] grid-bg text-white overflow-x-hidden relative">
       <SplashScreen show={showSplash} />
       <div className="pointer-events-none absolute inset-0 z-0">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_22%,rgba(124,58,237,0.22),transparent_34%),radial-gradient(circle_at_82%_14%,rgba(255,45,120,0.18),transparent_30%),radial-gradient(circle_at_50%_78%,rgba(0,245,255,0.08),transparent_34%)]" />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#050510] via-[#0b0a1a] to-[#050510]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_22%,rgba(124,58,237,0.30),transparent_34%),radial-gradient(circle_at_82%_14%,rgba(255,45,120,0.24),transparent_30%),radial-gradient(circle_at_50%_78%,rgba(0,245,255,0.14),transparent_34%)]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#050510]/20 via-[#0b0a1a]/35 to-[#050510]/30" />
+      </div>
+      <div className="pointer-events-none absolute inset-0 z-[1]">
+        {FLOATING_ICONS.map((item, idx) => (
+          <motion.div
+            key={`${item.className}-${idx}`}
+            className={`absolute ${item.className} w-12 h-12 rounded-2xl border border-white/15 bg-white/5 backdrop-blur-sm items-center justify-center text-purple-200`}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: [0.4, 0.8, 0.4], y: [0, -14, 0], rotate: [0, 4, 0] }}
+            transition={{ delay: item.delay, duration: item.duration, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            <item.icon size={20} />
+          </motion.div>
+        ))}
       </div>
 
       <section className="relative min-h-screen flex items-center justify-center pt-8">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0d0a1a]/35 via-[#0d0a1a]/60 to-[#0d0a1a] pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0d0a1a]/20 via-[#0d0a1a]/35 to-[#0d0a1a]/45 pointer-events-none" />
 
         <motion.div className="relative z-10 text-center px-4 max-w-5xl mx-auto" initial="hidden" animate="show" variants={{ hidden: {}, show: { transition: { staggerChildren: 0.08 } } }}>
           <motion.div
