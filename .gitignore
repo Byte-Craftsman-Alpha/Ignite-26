@@ -11,6 +11,9 @@ node_modules
 dist
 dist-ssr
 *.local
+.vite/
+coverage/
+*.tsbuildinfo
 
 # Editor directories and files
 .vscode/*
@@ -34,3 +37,11 @@ data/
 *.db
 *.db-shm
 *.db-wal
+
+# Generated media storage (runtime uploads/previews)
+public/uploads/**/original/**
+public/uploads/**/thumbs/**
+
+# Local scratch/temp files
+temp_*.html
+temp_*.css
