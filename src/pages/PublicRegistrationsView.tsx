@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Users, ShieldAlert, Filter, Plus, X } from 'lucide-react';
+import { Users, ShieldAlert, Filter, Plus, X, QrCode } from 'lucide-react';
 import { getErrorMessage, readJsonSafe } from '../lib/http';
 import LoadingSpinner from '../components/LoadingSpinner';
 
@@ -117,6 +117,7 @@ export default function PublicRegistrationsView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filters, setFilters] = useState<FilterCondition[]>([]);
+  const [qrModal, setQrModal] = useState<{ title: string; value: string } | null>(null);
 
   useEffect(() => {
     const run = async () => {
@@ -289,6 +290,7 @@ export default function PublicRegistrationsView() {
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Payment ID</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Payment</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Check-in</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">QR</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -304,6 +306,25 @@ export default function PublicRegistrationsView() {
                     <td className="px-4 py-3 text-sm text-gray-300">{p.payment_id}</td>
                     <td className="px-4 py-3 text-sm">{p.payment_verified ? <span className="text-emerald-300">Verified</span> : <span className="text-amber-300">Pending</span>}</td>
                     <td className="px-4 py-3 text-sm">{p.check_in_status ? <span className="text-emerald-300">Checked In</span> : <span className="text-gray-400">Pending</span>}</td>
+                    <td className="px-4 py-3 text-sm">
+                      <button
+                        onClick={() =>
+                          setQrModal({
+                            title: `QR - ${p.full_name}`,
+                            value: JSON.stringify({
+                              id: p.id,
+                              roll_number: p.roll_number,
+                              payment_id: p.payment_id,
+                              email: p.email,
+                              whatsapp_number: p.whatsapp_number,
+                            }),
+                          })
+                        }
+                        className="px-2.5 py-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 text-violet-300 hover:bg-violet-500/20 inline-flex items-center gap-1.5 text-xs"
+                      >
+                        <QrCode size={13} /> QR
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -318,6 +339,27 @@ export default function PublicRegistrationsView() {
           )}
         </div>
       </div>
+
+      {qrModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-[#171127] border border-white/10 rounded-2xl">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+              <h3 className="text-base font-bold text-white">{qrModal.title}</h3>
+              <button onClick={() => setQrModal(null)} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-300">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="p-5">
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(qrModal.value)}`}
+                alt="QR Code"
+                className="w-64 h-64 mx-auto rounded-lg bg-white p-2"
+              />
+              <p className="mt-3 text-xs text-gray-400 break-all">{qrModal.value}</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

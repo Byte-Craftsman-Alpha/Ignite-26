@@ -135,6 +135,14 @@ function initSchema() {
       enabled INTEGER NOT NULL DEFAULT 1,
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS validation_handler_access (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      token TEXT NOT NULL DEFAULT '',
+      enabled INTEGER NOT NULL DEFAULT 0,
+      password_hash TEXT NOT NULL DEFAULT '',
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
 
   ensureColumn('participants', 'payment_verified', "INTEGER NOT NULL DEFAULT 0");
@@ -153,6 +161,17 @@ function initSchema() {
   if (!registrationControl) {
     db.prepare('INSERT INTO registration_control (id, enabled, updated_at) VALUES (1, 1, ?)')
       .run(new Date().toISOString());
+  }
+
+  const defaultHandlerPassword = String(process.env.VALIDATION_HANDLER_PASSWORD || 'ignite-handler-26');
+  const defaultHandlerPasswordHash = crypto.createHash('sha256').update(defaultHandlerPassword).digest('hex');
+  const validationAccess = db.prepare('SELECT id FROM validation_handler_access WHERE id = 1').get();
+  if (!validationAccess) {
+    db.prepare('INSERT INTO validation_handler_access (id, token, enabled, password_hash, updated_at) VALUES (1, ?, 0, ?, ?)')
+      .run(crypto.randomBytes(24).toString('hex'), defaultHandlerPasswordHash, new Date().toISOString());
+  } else {
+    db.prepare('UPDATE validation_handler_access SET password_hash = ?, updated_at = ? WHERE id = 1')
+      .run(defaultHandlerPasswordHash, new Date().toISOString());
   }
 
   const adminUser = db.prepare('SELECT id FROM auth_users WHERE email = ? LIMIT 1').get(adminEmail);

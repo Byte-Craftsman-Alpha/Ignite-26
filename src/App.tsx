@@ -8,6 +8,7 @@ import MyProfile from './pages/MyProfile';
 import ManagementTeam from './pages/ManagementTeam';
 import PublicMediaUpload from './pages/PublicMediaUpload';
 import PublicRegistrationsView from './pages/PublicRegistrationsView';
+import ValidationHandler from './pages/ValidationHandler';
 import AdminLogin from './pages/admin/Login';
 import AdminDashboard from './pages/admin/Dashboard';
 import MediaUpload from './pages/admin/MediaUpload';
@@ -30,6 +31,7 @@ export default function App() {
         <Route path="/management-team" element={<ManagementTeam />} />
         <Route path="/upload-media" element={<PublicMediaUpload />} />
         <Route path="/records/:token" element={<PublicRegistrationsView />} />
+        <Route path="/validate/:token" element={<ValidationHandler />} />
         <Route path="/my-profile" element={<MyProfile />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<AdminGuard><AdminDashboard /></AdminGuard>} />

@@ -50,6 +50,7 @@ The serverless API layer now uses local SQLite:
 - `SQLITE_DB_PATH` (example: `./data/ignite26.db`)
 - `GOOGLE_SHEET_SYNC_URL` (optional Google Sheet URL for sync pull)
 - `SHEET_SYNC_SECRET` (optional secret for Apps Script webhook push)
+- `VALIDATION_HANDLER_PASSWORD` (default password for hidden `/validate/:token` handler page)
 
 On first run, tables are auto-created and a default admin is seeded:
 

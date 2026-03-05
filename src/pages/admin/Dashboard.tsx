@@ -19,6 +19,8 @@ import {
   Copy,
   Link2,
   Power,
+  QrCode,
+  MoreVertical,
 } from 'lucide-react';
 import { authHeaders } from '../../lib/auth';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -49,6 +51,14 @@ interface Stats {
 }
 
 interface ShareAccess {
+  enabled: boolean;
+  token: string;
+  share_path: string;
+  share_url: string;
+  updated_at: string | null;
+}
+
+interface ValidationHandlerAccess {
   enabled: boolean;
   token: string;
   share_path: string;
@@ -113,8 +123,14 @@ export default function AdminDashboard() {
   const [shareAccess, setShareAccess] = useState<ShareAccess | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
   const [shareMessage, setShareMessage] = useState('');
+  const [handlerAccess, setHandlerAccess] = useState<ValidationHandlerAccess | null>(null);
+  const [handlerLoading, setHandlerLoading] = useState(false);
+  const [handlerMessage, setHandlerMessage] = useState('');
+  const [handlerPassword, setHandlerPassword] = useState('');
   const [registrationControl, setRegistrationControl] = useState<RegistrationControl | null>(null);
   const [registrationToggleLoading, setRegistrationToggleLoading] = useState(false);
+  const [openActionMenuId, setOpenActionMenuId] = useState<number | null>(null);
+  const [qrModal, setQrModal] = useState<{ title: string; value: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const fetchData = useCallback(async () => {
@@ -138,12 +154,6 @@ export default function AdminDashboard() {
     }
   }, [search, branch, branches.length]);
 
-  useEffect(() => {
-    fetchData();
-    fetchShareAccess();
-    fetchRegistrationControl();
-  }, [fetchData]);
-
   const fetchShareAccess = useCallback(async () => {
     try {
       const res = await fetch('/api/participants-share', { headers: authHeaders() });
@@ -165,6 +175,24 @@ export default function AdminDashboard() {
       console.error(err);
     }
   }, []);
+
+  const fetchHandlerAccess = useCallback(async () => {
+    try {
+      const res = await fetch('/api/validation-handler-access', { headers: authHeaders() });
+      const data = await readJsonSafe<ValidationHandlerAccess & { error?: string }>(res);
+      if (!res.ok) throw new Error(getErrorMessage(data, 'Failed to load validation handler access'));
+      setHandlerAccess(data);
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+    fetchShareAccess();
+    fetchHandlerAccess();
+    fetchRegistrationControl();
+  }, [fetchData, fetchHandlerAccess, fetchRegistrationControl, fetchShareAccess]);
 
   const handleCheckIn = async (id: number, currentStatus: boolean) => {
     setCheckingIn(id);
@@ -347,7 +375,9 @@ export default function AdminDashboard() {
 
   const buildShareLink = () => {
     if (!shareAccess?.token) return '';
-    if (shareAccess.share_url) return shareAccess.share_url;
+    if (shareAccess.share_url) {
+      return /^https?:\/\//i.test(shareAccess.share_url) ? shareAccess.share_url : `${window.location.origin}${shareAccess.share_url}`;
+    }
     return `${window.location.origin}/records/${shareAccess.token}`;
   };
 
@@ -385,6 +415,26 @@ export default function AdminDashboard() {
     }
   };
 
+  const openParticipantQr = (participant: Participant) => {
+    const payload = JSON.stringify({
+      id: participant.id,
+      roll_number: participant.roll_number,
+      payment_id: participant.payment_id,
+      email: participant.email,
+      whatsapp_number: participant.whatsapp_number,
+    });
+    setQrModal({ title: `QR - ${participant.full_name}`, value: payload });
+  };
+
+  const openShareQr = () => {
+    const link = buildShareLink();
+    if (!link) {
+      setShareMessage('Share link is not available yet.');
+      return;
+    }
+    setQrModal({ title: 'Shared View Access Link', value: link });
+  };
+
   const toggleRegistrations = async () => {
     if (!registrationControl) return;
     setRegistrationToggleLoading(true);
@@ -402,6 +452,49 @@ export default function AdminDashboard() {
       setTransferMessage(err instanceof Error ? err.message : 'Failed to update registration status');
     } finally {
       setRegistrationToggleLoading(false);
+    }
+  };
+
+  const buildHandlerLink = () => {
+    if (!handlerAccess?.token) return '';
+    if (handlerAccess.share_url) {
+      return /^https?:\/\//i.test(handlerAccess.share_url) ? handlerAccess.share_url : `${window.location.origin}${handlerAccess.share_url}`;
+    }
+    return `${window.location.origin}/validate/${handlerAccess.token}`;
+  };
+
+  const handleHandlerAccessUpdate = async (payload: { enabled?: boolean; regenerate?: boolean; password?: string }, successMessage: string) => {
+    setHandlerLoading(true);
+    setHandlerMessage('');
+    try {
+      const res = await fetch('/api/validation-handler-access', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify(payload),
+      });
+      const data = await readJsonSafe<ValidationHandlerAccess & { error?: string }>(res);
+      if (!res.ok) throw new Error(getErrorMessage(data, 'Failed to update validation handler access'));
+      setHandlerAccess(data);
+      setHandlerMessage(successMessage);
+      if (payload.password) setHandlerPassword('');
+    } catch (err) {
+      setHandlerMessage(err instanceof Error ? err.message : 'Failed to update validation handler access');
+    } finally {
+      setHandlerLoading(false);
+    }
+  };
+
+  const copyHandlerLink = async () => {
+    const link = buildHandlerLink();
+    if (!link) {
+      setHandlerMessage('Validation handler link is not available yet.');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(link);
+      setHandlerMessage('Validation handler link copied.');
+    } catch {
+      setHandlerMessage(link);
     }
   };
 
@@ -507,9 +600,74 @@ export default function AdminDashboard() {
               >
                 <Copy size={14} /> Copy Link
               </button>
+              <button
+                onClick={openShareQr}
+                disabled={shareLoading || !shareAccess?.enabled}
+                className="px-4 py-2 rounded-xl border border-violet-500/30 bg-violet-500/10 text-violet-300 text-sm font-medium hover:bg-violet-500/20 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                <QrCode size={14} /> QR Link
+              </button>
             </div>
           </div>
           {shareMessage && <p className="text-sm text-gray-300 mt-3">{shareMessage}</p>}
+        </div>
+
+        <div className="mb-8 p-5 rounded-2xl bg-[#0d0d1f]/90 border border-[#1e1e3f]">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <p className="text-white font-semibold flex items-center gap-2"><ShieldCheck size={16} className="text-emerald-300" /> Validation Handler Access</p>
+              <p className="text-sm text-gray-400 mt-1">Hidden tokenized page for QR scan + quick search and payment/check-in handling.</p>
+              {handlerAccess?.token && (
+                <p className="text-xs text-gray-500 mt-2">Token: <span className="font-mono">{handlerAccess.token.slice(0, 10)}...</span></p>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => handleHandlerAccessUpdate({ enabled: !handlerAccess?.enabled }, handlerAccess?.enabled ? 'Validation handler access disabled.' : 'Validation handler access enabled.')}
+                disabled={handlerLoading}
+                className={`px-4 py-2 rounded-xl border text-sm font-medium transition-colors disabled:opacity-50 ${
+                  handlerAccess?.enabled
+                    ? 'border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/20'
+                    : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
+                }`}
+              >
+                {handlerLoading ? 'Updating...' : handlerAccess?.enabled ? 'Disable Access' : 'Enable Access'}
+              </button>
+              <button
+                onClick={() => handleHandlerAccessUpdate({ regenerate: true }, 'Validation handler link regenerated. Old link revoked.')}
+                disabled={handlerLoading}
+                className="px-4 py-2 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-300 text-sm font-medium hover:bg-amber-500/20 transition-colors disabled:opacity-50"
+              >
+                Regenerate Link
+              </button>
+              <button
+                onClick={copyHandlerLink}
+                disabled={handlerLoading || !handlerAccess?.enabled}
+                className="px-4 py-2 rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-300 text-sm font-medium hover:bg-cyan-500/20 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                <Copy size={14} /> Copy Link
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-col sm:flex-row gap-2">
+            <input
+              type="password"
+              value={handlerPassword}
+              onChange={(e) => setHandlerPassword(e.target.value)}
+              placeholder="Set/rotate handler page password"
+              className="flex-1 bg-[#15152a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-400/50"
+            />
+            <button
+              onClick={() => handleHandlerAccessUpdate({ password: handlerPassword }, 'Validation handler password updated.')}
+              disabled={handlerLoading || handlerPassword.trim().length < 4}
+              className="px-4 py-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 text-sm font-medium hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+            >
+              Update Password
+            </button>
+          </div>
+
+          {handlerMessage && <p className="text-sm text-gray-300 mt-3">{handlerMessage}</p>}
         </div>
 
         {stats && (
@@ -681,44 +839,66 @@ export default function AdminDashboard() {
                         {p.check_in_time && <p className="text-gray-600 text-xs">{new Date(p.check_in_time).toLocaleTimeString()}</p>}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="relative inline-block text-left">
                           <button
-                            onClick={() => handlePaymentVerification(p.id, p.payment_verified)}
-                            disabled={verifyingPayment === p.id}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50 ${
-                              p.payment_verified
-                                ? 'bg-amber-500/10 border border-amber-500/30 text-amber-300 hover:bg-amber-500/20'
-                                : 'bg-blue-500/10 border border-blue-500/30 text-blue-300 hover:bg-blue-500/20'
-                            }`}
+                            onClick={() => setOpenActionMenuId(prev => (prev === p.id ? null : p.id))}
+                            className="w-9 h-9 rounded-lg border border-white/15 bg-white/5 text-gray-200 hover:bg-white/10 inline-flex items-center justify-center"
+                            title="Actions"
                           >
-                            {verifyingPayment === p.id ? '...' : p.payment_verified ? 'Unverify Pay' : 'Verify Pay'}
+                            <MoreVertical size={15} />
                           </button>
-                          <button
-                            onClick={() => handleCheckIn(p.id, p.check_in_status)}
-                            disabled={checkingIn === p.id}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50 ${
-                              p.check_in_status
-                                ? 'bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20'
-                                : 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
-                            }`}
-                          >
-                            {checkingIn === p.id ? '...' : p.check_in_status ? 'Undo' : 'Check In'}
-                          </button>
-                          <button
-                            onClick={() => openEdit(p)}
-                            className="w-8 h-8 rounded-lg border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20 flex items-center justify-center"
-                            title="Edit registration"
-                          >
-                            <Pencil size={14} />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(p)}
-                            disabled={deletingId === p.id}
-                            className="w-8 h-8 rounded-lg border border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/20 disabled:opacity-50 flex items-center justify-center"
-                            title="Delete registration"
-                          >
-                            {deletingId === p.id ? '...' : <Trash2 size={14} />}
-                          </button>
+                          {openActionMenuId === p.id && (
+                            <div className="absolute right-0 mt-2 w-44 rounded-xl border border-[#2a2a4a] bg-[#121225] shadow-xl z-20 overflow-hidden">
+                              <button
+                                onClick={() => {
+                                  handlePaymentVerification(p.id, p.payment_verified);
+                                  setOpenActionMenuId(null);
+                                }}
+                                disabled={verifyingPayment === p.id}
+                                className="w-full px-3 py-2 text-left text-xs text-cyan-200 hover:bg-cyan-500/10 flex items-center gap-2 disabled:opacity-50"
+                              >
+                                <ShieldCheck size={13} /> {p.payment_verified ? 'Unverify Pay' : 'Verify Pay'}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  handleCheckIn(p.id, p.check_in_status);
+                                  setOpenActionMenuId(null);
+                                }}
+                                disabled={checkingIn === p.id}
+                                className="w-full px-3 py-2 text-left text-xs text-emerald-200 hover:bg-emerald-500/10 flex items-center gap-2 disabled:opacity-50 border-t border-white/5"
+                              >
+                                <UserCheck size={13} /> {p.check_in_status ? 'Undo Check-in' : 'Check In'}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  openParticipantQr(p);
+                                  setOpenActionMenuId(null);
+                                }}
+                                className="w-full px-3 py-2 text-left text-xs text-violet-200 hover:bg-violet-500/10 flex items-center gap-2 border-t border-white/5"
+                              >
+                                <QrCode size={13} /> Show QR
+                              </button>
+                              <button
+                                onClick={() => {
+                                  openEdit(p);
+                                  setOpenActionMenuId(null);
+                                }}
+                                className="w-full px-3 py-2 text-left text-xs text-indigo-200 hover:bg-indigo-500/10 flex items-center gap-2 border-t border-white/5"
+                              >
+                                <Pencil size={13} /> Edit
+                              </button>
+                              <button
+                                onClick={() => {
+                                  handleDelete(p);
+                                  setOpenActionMenuId(null);
+                                }}
+                                disabled={deletingId === p.id}
+                                className="w-full px-3 py-2 text-left text-xs text-red-200 hover:bg-red-500/10 flex items-center gap-2 border-t border-white/5 disabled:opacity-50"
+                              >
+                                <Trash2 size={13} /> Delete
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -832,6 +1012,27 @@ export default function AdminDashboard() {
                 </button>
               </div>
             </form>
+          </motion.div>
+        </div>
+      )}
+
+      {qrModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm bg-[#171127] border border-white/10 rounded-2xl">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+              <h3 className="text-base font-bold text-white">{qrModal.title}</h3>
+              <button onClick={() => setQrModal(null)} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-300">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="p-5">
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(qrModal.value)}`}
+                alt="QR Code"
+                className="w-64 h-64 mx-auto rounded-lg bg-white p-2"
+              />
+              <p className="mt-3 text-xs text-gray-400 break-all">{qrModal.value}</p>
+            </div>
           </motion.div>
         </div>
       )}
