@@ -15,6 +15,7 @@ import participantsTransfer from './participants-transfer.js';
 import participantsShare from './participants-share.js';
 import publicParticipants from './public-participants.js';
 import registrationControl from './registration-control.js';
+import sheetSync from './sheet-sync.js';
 import login from './auth/login.js';
 import me from './auth/me.js';
 import signout from './auth/signout.js';
@@ -40,6 +41,7 @@ app.all('/api/participants-transfer', (req, res) => participantsTransfer(req, re
 app.all('/api/participants-share', (req, res) => participantsShare(req, res));
 app.all('/api/public-participants', (req, res) => publicParticipants(req, res));
 app.all('/api/registration-control', (req, res) => registrationControl(req, res));
+app.all('/api/sheet-sync', (req, res) => sheetSync(req, res));
 app.all('/api/auth/login', (req, res) => login(req, res));
 app.all('/api/auth/me', (req, res) => me(req, res));
 app.all('/api/auth/signout', (req, res) => signout(req, res));

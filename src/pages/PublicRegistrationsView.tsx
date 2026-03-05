@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Users, ShieldAlert } from 'lucide-react';
+import { Users, ShieldAlert, Filter, Plus, X } from 'lucide-react';
 import { getErrorMessage, readJsonSafe } from '../lib/http';
 import LoadingSpinner from '../components/LoadingSpinner';
 
@@ -20,11 +20,103 @@ interface Participant {
   registered_at: string;
 }
 
+type FilterField =
+  | 'id'
+  | 'full_name'
+  | 'roll_number'
+  | 'branch'
+  | 'email'
+  | 'year'
+  | 'whatsapp_number'
+  | 'skills'
+  | 'payment_id'
+  | 'payment_verified'
+  | 'check_in_status'
+  | 'check_in_time'
+  | 'registered_at';
+
+type TextOperator = 'contains' | 'equals' | 'starts_with' | 'ends_with' | 'not_contains';
+type BoolOperator = 'is_true' | 'is_false';
+type Operator = TextOperator | BoolOperator;
+
+interface FilterCondition {
+  id: number;
+  field: FilterField;
+  operator: Operator;
+  value: string;
+}
+
+const FIELD_OPTIONS: Array<{ key: FilterField; label: string; kind: 'text' | 'bool' }> = [
+  { key: 'id', label: 'ID', kind: 'text' },
+  { key: 'full_name', label: 'Name', kind: 'text' },
+  { key: 'roll_number', label: 'Roll No', kind: 'text' },
+  { key: 'branch', label: 'Branch', kind: 'text' },
+  { key: 'email', label: 'Email', kind: 'text' },
+  { key: 'year', label: 'Year', kind: 'text' },
+  { key: 'whatsapp_number', label: 'WhatsApp', kind: 'text' },
+  { key: 'skills', label: 'Skills', kind: 'text' },
+  { key: 'payment_id', label: 'Payment ID', kind: 'text' },
+  { key: 'payment_verified', label: 'Payment Verified', kind: 'bool' },
+  { key: 'check_in_status', label: 'Check-in Status', kind: 'bool' },
+  { key: 'check_in_time', label: 'Check-in Time', kind: 'text' },
+  { key: 'registered_at', label: 'Registered At', kind: 'text' },
+];
+
+const TEXT_OPERATORS: Array<{ key: TextOperator; label: string }> = [
+  { key: 'contains', label: 'contains' },
+  { key: 'equals', label: 'equals' },
+  { key: 'starts_with', label: 'starts with' },
+  { key: 'ends_with', label: 'ends with' },
+  { key: 'not_contains', label: 'does not contain' },
+];
+
+const BOOL_OPERATORS: Array<{ key: BoolOperator; label: string }> = [
+  { key: 'is_true', label: 'is true' },
+  { key: 'is_false', label: 'is false' },
+];
+
+function fieldKind(field: FilterField): 'text' | 'bool' {
+  return FIELD_OPTIONS.find((f) => f.key === field)?.kind || 'text';
+}
+
+function normalizeText(value: unknown): string {
+  return String(value ?? '').trim().toLowerCase();
+}
+
+function participantFieldValue(p: Participant, field: FilterField): string | number | boolean {
+  if (field === 'skills') return (p.skills || []).join(', ');
+  if (field === 'payment_verified') return Boolean(p.payment_verified);
+  if (field === 'check_in_status') return Boolean(p.check_in_status);
+  return p[field] ?? '';
+}
+
+function conditionMatches(p: Participant, condition: FilterCondition): boolean {
+  const kind = fieldKind(condition.field);
+  const raw = participantFieldValue(p, condition.field);
+
+  if (kind === 'bool') {
+    if (condition.operator === 'is_true') return Boolean(raw) === true;
+    if (condition.operator === 'is_false') return Boolean(raw) === false;
+    return true;
+  }
+
+  const target = normalizeText(raw);
+  const query = normalizeText(condition.value);
+  if (!query) return true;
+
+  if (condition.operator === 'equals') return target === query;
+  if (condition.operator === 'starts_with') return target.startsWith(query);
+  if (condition.operator === 'ends_with') return target.endsWith(query);
+  if (condition.operator === 'not_contains') return !target.includes(query);
+  return target.includes(query);
+}
+
 export default function PublicRegistrationsView() {
   const { token = '' } = useParams();
   const [rows, setRows] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [filters, setFilters] = useState<FilterCondition[]>([]);
 
   useEffect(() => {
     const run = async () => {
@@ -43,6 +135,37 @@ export default function PublicRegistrationsView() {
     };
     run();
   }, [token]);
+
+  const filteredRows = useMemo(() => {
+    if (!filters.length) return rows;
+    return rows.filter((row) => filters.every((condition) => conditionMatches(row, condition)));
+  }, [rows, filters]);
+
+  const addFilter = () => {
+    setFilters((prev) => {
+      const nextId = prev.length ? Math.max(...prev.map((f) => f.id)) + 1 : 1;
+      return [...prev, { id: nextId, field: 'full_name', operator: 'contains', value: '' }];
+    });
+  };
+
+  const removeFilter = (id: number) => {
+    setFilters((prev) => prev.filter((f) => f.id !== id));
+  };
+
+  const updateFilter = (id: number, patch: Partial<FilterCondition>) => {
+    setFilters((prev) =>
+      prev.map((f) => {
+        if (f.id !== id) return f;
+        const next = { ...f, ...patch };
+        if (patch.field) {
+          const kind = fieldKind(patch.field);
+          next.operator = kind === 'bool' ? 'is_true' : 'contains';
+          next.value = '';
+        }
+        return next;
+      })
+    );
+  };
 
   if (loading) {
     return (
@@ -71,6 +194,86 @@ export default function PublicRegistrationsView() {
           <p className="text-gray-400 text-sm mt-1">Private shared page. No edit actions are available.</p>
         </div>
 
+        <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 mb-4">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <p className="text-sm text-gray-300 flex items-center gap-2">
+              <Filter size={15} className="text-cyan-300" /> Filters (AND conditions)
+            </p>
+            <div className="flex items-center gap-2">
+              {!!filters.length && (
+                <button
+                  type="button"
+                  onClick={() => setFilters([])}
+                  className="px-3 py-1.5 text-xs rounded-lg border border-white/15 text-gray-300 hover:bg-white/10"
+                >
+                  Clear
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={addFilter}
+                className="px-3 py-1.5 text-xs rounded-lg border border-cyan-400/40 text-cyan-200 hover:bg-cyan-400/10 inline-flex items-center gap-1.5"
+              >
+                <Plus size={13} /> Add filter
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {filters.map((f) => {
+              const kind = fieldKind(f.field);
+              return (
+                <div key={f.id} className="grid grid-cols-1 md:grid-cols-[1.3fr_1fr_1.3fr_auto] gap-2">
+                  <select
+                    value={f.field}
+                    onChange={(e) => updateFilter(f.id, { field: e.target.value as FilterField })}
+                    className="bg-[#15152a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-400/50"
+                  >
+                    {FIELD_OPTIONS.map((opt) => (
+                      <option key={opt.key} value={opt.key}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={f.operator}
+                    onChange={(e) => updateFilter(f.id, { operator: e.target.value as Operator })}
+                    className="bg-[#15152a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-400/50"
+                  >
+                    {(kind === 'bool' ? BOOL_OPERATORS : TEXT_OPERATORS).map((opt) => (
+                      <option key={opt.key} value={opt.key}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+
+                  {kind === 'bool' ? (
+                    <div className="bg-[#15152a] border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-400">
+                      No value needed
+                    </div>
+                  ) : (
+                    <input
+                      value={f.value}
+                      onChange={(e) => updateFilter(f.id, { value: e.target.value })}
+                      placeholder="Value"
+                      className="bg-[#15152a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-400/50"
+                    />
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => removeFilter(f.id)}
+                    className="px-3 py-2 text-sm rounded-lg border border-red-400/30 text-red-200 hover:bg-red-500/10 inline-flex items-center justify-center"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="rounded-2xl border border-white/10 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -89,7 +292,7 @@ export default function PublicRegistrationsView() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {rows.map((p) => (
+                {filteredRows.map((p) => (
                   <tr key={p.id} className="hover:bg-white/[0.02] transition-colors">
                     <td className="px-4 py-3 text-sm text-white">{p.full_name}</td>
                     <td className="px-4 py-3 text-sm text-gray-300 font-mono">{p.roll_number}</td>
@@ -107,10 +310,10 @@ export default function PublicRegistrationsView() {
             </table>
           </div>
 
-          {rows.length === 0 && (
+          {filteredRows.length === 0 && (
             <div className="text-center py-12 text-gray-500">
               <Users size={32} className="mx-auto mb-3 opacity-40" />
-              <p>No registrations found.</p>
+              <p>{rows.length === 0 ? 'No registrations found.' : 'No records match current filters.'}</p>
             </div>
           )}
         </div>
@@ -118,4 +321,3 @@ export default function PublicRegistrationsView() {
     </div>
   );
 }
-

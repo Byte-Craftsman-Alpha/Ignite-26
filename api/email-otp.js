@@ -47,6 +47,11 @@ export default async function handler(req, res) {
         return res.status(403).json({ error: 'Registrations are currently closed by admin.' });
       }
 
+      const existing = db.prepare('SELECT id FROM participants WHERE email = ? LIMIT 1').get(normalizedEmail);
+      if (existing) {
+        return res.status(409).json({ error: 'This email address is already registered' });
+      }
+
       const recent = db
         .prepare("SELECT created_at FROM email_otp_sessions WHERE email = ? ORDER BY id DESC LIMIT 1")
         .get(normalizedEmail);
