@@ -71,6 +71,13 @@ interface RegistrationControl {
   updated_at: string | null;
 }
 
+interface ActionMenuState {
+  participantId: number;
+  top: number;
+  left: number;
+  openUp: boolean;
+}
+
 interface ParticipantForm {
   email: string;
   full_name: string;
@@ -129,7 +136,7 @@ export default function AdminDashboard() {
   const [handlerPassword, setHandlerPassword] = useState('');
   const [registrationControl, setRegistrationControl] = useState<RegistrationControl | null>(null);
   const [registrationToggleLoading, setRegistrationToggleLoading] = useState(false);
-  const [openActionMenuId, setOpenActionMenuId] = useState<number | null>(null);
+  const [openActionMenu, setOpenActionMenu] = useState<ActionMenuState | null>(null);
   const [qrModal, setQrModal] = useState<{ title: string; value: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -193,6 +200,26 @@ export default function AdminDashboard() {
     fetchHandlerAccess();
     fetchRegistrationControl();
   }, [fetchData, fetchHandlerAccess, fetchRegistrationControl, fetchShareAccess]);
+
+  useEffect(() => {
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+      if (target.closest('[data-actions-menu="true"]')) return;
+      if (target.closest('[data-action-trigger="true"]')) return;
+      setOpenActionMenu(null);
+    };
+
+    const onScroll = () => setOpenActionMenu(null);
+    window.addEventListener('pointerdown', onPointerDown);
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', onScroll);
+    return () => {
+      window.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', onScroll);
+    };
+  }, []);
 
   const handleCheckIn = async (id: number, currentStatus: boolean) => {
     setCheckingIn(id);
@@ -433,6 +460,20 @@ export default function AdminDashboard() {
       return;
     }
     setQrModal({ title: 'Shared View Access Link', value: link });
+  };
+
+  const toggleActionMenu = (event: React.MouseEvent<HTMLButtonElement>, participantId: number) => {
+    event.stopPropagation();
+    const rect = event.currentTarget.getBoundingClientRect();
+    const estimatedHeight = 220;
+    const openUp = rect.bottom + estimatedHeight > window.innerHeight && rect.top > estimatedHeight;
+    const top = openUp ? rect.top - 8 : rect.bottom + 8;
+    const left = Math.min(rect.right, window.innerWidth - 12);
+
+    setOpenActionMenu((prev) => {
+      if (prev?.participantId === participantId) return null;
+      return { participantId, top, left, openUp };
+    });
   };
 
   const toggleRegistrations = async () => {
@@ -776,8 +817,8 @@ export default function AdminDashboard() {
         {loading ? (
           <LoadingSpinner text="Loading participants..." />
         ) : (
-          <div className="rounded-2xl border border-white/10 overflow-hidden mb-8">
-            <div className="overflow-x-auto">
+          <div className="rounded-2xl border border-white/10 overflow-visible mb-8">
+            <div className="overflow-x-auto overflow-y-visible">
               <table className="w-full">
                 <thead>
                   <tr className="bg-white/5 border-b border-white/10">
@@ -841,64 +882,13 @@ export default function AdminDashboard() {
                       <td className="px-4 py-3 text-right">
                         <div className="relative inline-block text-left">
                           <button
-                            onClick={() => setOpenActionMenuId(prev => (prev === p.id ? null : p.id))}
+                            data-action-trigger="true"
+                            onClick={(event) => toggleActionMenu(event, p.id)}
                             className="w-9 h-9 rounded-lg border border-white/15 bg-white/5 text-gray-200 hover:bg-white/10 inline-flex items-center justify-center"
                             title="Actions"
                           >
                             <MoreVertical size={15} />
                           </button>
-                          {openActionMenuId === p.id && (
-                            <div className="absolute right-0 mt-2 w-44 rounded-xl border border-[#2a2a4a] bg-[#121225] shadow-xl z-20 overflow-hidden">
-                              <button
-                                onClick={() => {
-                                  handlePaymentVerification(p.id, p.payment_verified);
-                                  setOpenActionMenuId(null);
-                                }}
-                                disabled={verifyingPayment === p.id}
-                                className="w-full px-3 py-2 text-left text-xs text-cyan-200 hover:bg-cyan-500/10 flex items-center gap-2 disabled:opacity-50"
-                              >
-                                <ShieldCheck size={13} /> {p.payment_verified ? 'Unverify Pay' : 'Verify Pay'}
-                              </button>
-                              <button
-                                onClick={() => {
-                                  handleCheckIn(p.id, p.check_in_status);
-                                  setOpenActionMenuId(null);
-                                }}
-                                disabled={checkingIn === p.id}
-                                className="w-full px-3 py-2 text-left text-xs text-emerald-200 hover:bg-emerald-500/10 flex items-center gap-2 disabled:opacity-50 border-t border-white/5"
-                              >
-                                <UserCheck size={13} /> {p.check_in_status ? 'Undo Check-in' : 'Check In'}
-                              </button>
-                              <button
-                                onClick={() => {
-                                  openParticipantQr(p);
-                                  setOpenActionMenuId(null);
-                                }}
-                                className="w-full px-3 py-2 text-left text-xs text-violet-200 hover:bg-violet-500/10 flex items-center gap-2 border-t border-white/5"
-                              >
-                                <QrCode size={13} /> Show QR
-                              </button>
-                              <button
-                                onClick={() => {
-                                  openEdit(p);
-                                  setOpenActionMenuId(null);
-                                }}
-                                className="w-full px-3 py-2 text-left text-xs text-indigo-200 hover:bg-indigo-500/10 flex items-center gap-2 border-t border-white/5"
-                              >
-                                <Pencil size={13} /> Edit
-                              </button>
-                              <button
-                                onClick={() => {
-                                  handleDelete(p);
-                                  setOpenActionMenuId(null);
-                                }}
-                                disabled={deletingId === p.id}
-                                className="w-full px-3 py-2 text-left text-xs text-red-200 hover:bg-red-500/10 flex items-center gap-2 border-t border-white/5 disabled:opacity-50"
-                              >
-                                <Trash2 size={13} /> Delete
-                              </button>
-                            </div>
-                          )}
                         </div>
                       </td>
                     </tr>
@@ -1015,6 +1005,71 @@ export default function AdminDashboard() {
           </motion.div>
         </div>
       )}
+
+      {openActionMenu && (() => {
+        const participant = participants.find((item) => item.id === openActionMenu.participantId);
+        if (!participant) return null;
+        return (
+          <div
+            data-actions-menu="true"
+            className="fixed w-44 rounded-xl border border-[#2a2a4a] bg-[#121225] shadow-xl z-[9999] overflow-hidden"
+            style={{
+              top: openActionMenu.top,
+              left: openActionMenu.left,
+              transform: openActionMenu.openUp ? 'translate(-100%, -100%)' : 'translateX(-100%)',
+            }}
+          >
+            <button
+              onClick={() => {
+                handlePaymentVerification(participant.id, participant.payment_verified);
+                setOpenActionMenu(null);
+              }}
+              disabled={verifyingPayment === participant.id}
+              className="w-full px-3 py-2 text-left text-xs text-cyan-200 hover:bg-cyan-500/10 flex items-center gap-2 disabled:opacity-50"
+            >
+              <ShieldCheck size={13} /> {participant.payment_verified ? 'Unverify Pay' : 'Verify Pay'}
+            </button>
+            <button
+              onClick={() => {
+                handleCheckIn(participant.id, participant.check_in_status);
+                setOpenActionMenu(null);
+              }}
+              disabled={checkingIn === participant.id}
+              className="w-full px-3 py-2 text-left text-xs text-emerald-200 hover:bg-emerald-500/10 flex items-center gap-2 disabled:opacity-50 border-t border-white/5"
+            >
+              <UserCheck size={13} /> {participant.check_in_status ? 'Undo Check-in' : 'Check In'}
+            </button>
+            <button
+              onClick={() => {
+                openParticipantQr(participant);
+                setOpenActionMenu(null);
+              }}
+              className="w-full px-3 py-2 text-left text-xs text-violet-200 hover:bg-violet-500/10 flex items-center gap-2 border-t border-white/5"
+            >
+              <QrCode size={13} /> Show QR
+            </button>
+            <button
+              onClick={() => {
+                openEdit(participant);
+                setOpenActionMenu(null);
+              }}
+              className="w-full px-3 py-2 text-left text-xs text-indigo-200 hover:bg-indigo-500/10 flex items-center gap-2 border-t border-white/5"
+            >
+              <Pencil size={13} /> Edit
+            </button>
+            <button
+              onClick={() => {
+                handleDelete(participant);
+                setOpenActionMenu(null);
+              }}
+              disabled={deletingId === participant.id}
+              className="w-full px-3 py-2 text-left text-xs text-red-200 hover:bg-red-500/10 flex items-center gap-2 border-t border-white/5 disabled:opacity-50"
+            >
+              <Trash2 size={13} /> Delete
+            </button>
+          </div>
+        );
+      })()}
 
       {qrModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
