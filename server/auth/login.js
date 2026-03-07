@@ -25,7 +25,7 @@ export default async function handler(req, res) {
     if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
     const normalizedEmail = String(email).trim().toLowerCase();
 
-    const user = db.prepare('SELECT id, email, password_hash FROM auth_users WHERE email = ? LIMIT 1').get(normalizedEmail);
+    const user = await db.prepare('SELECT id, email, password_hash FROM auth_users WHERE email = ? LIMIT 1').get(normalizedEmail);
 
     if (!user || !verifyPassword(password, user.password_hash)) {
       return res.status(401).json({ error: 'Invalid credentials' });
@@ -33,7 +33,7 @@ export default async function handler(req, res) {
 
     const token = generateToken();
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-    db.prepare('INSERT INTO auth_sessions (id, user_id, expires_at) VALUES (?, ?, ?)').run(token, user.id, expiresAt);
+    await db.prepare('INSERT INTO auth_sessions (id, user_id, expires_at) VALUES (?, ?, ?)').run(token, user.id, expiresAt);
 
     return res.status(200).json({ user: { id: user.id, email: user.email }, token });
   } catch (err) {

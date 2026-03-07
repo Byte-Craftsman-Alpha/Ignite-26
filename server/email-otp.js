@@ -1,4 +1,4 @@
-﻿import crypto from 'crypto';
+import crypto from 'crypto';
 import db from './_db.js';
 import { sendOtpEmail } from './_mailer.js';
 
@@ -22,8 +22,8 @@ function randomOtp() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
-function registrationsEnabled() {
-  const row = db.prepare('SELECT enabled FROM registration_control WHERE id = 1').get();
+async function registrationsEnabled() {
+  const row = await db.prepare('SELECT enabled FROM registration_control WHERE id = 1').get();
   return !row || Boolean(row.enabled);
 }
 
@@ -43,17 +43,17 @@ export default async function handler(req, res) {
     }
 
     if (action === 'send') {
-      if (!registrationsEnabled()) {
+      if (!(await registrationsEnabled())) {
         return res.status(403).json({ error: 'Registrations are currently closed by admin.' });
       }
 
-      const existing = db.prepare('SELECT id FROM participants WHERE email = ? LIMIT 1').get(normalizedEmail);
+      const existing = await db.prepare('SELECT id FROM participants WHERE email = ? LIMIT 1').get(normalizedEmail);
       if (existing) {
         return res.status(409).json({ error: 'This email address is already registered' });
       }
 
-      const recent = db
-        .prepare("SELECT created_at FROM email_otp_sessions WHERE email = ? ORDER BY id DESC LIMIT 1")
+      const recent = await db
+        .prepare('SELECT created_at FROM email_otp_sessions WHERE email = ? ORDER BY id DESC LIMIT 1')
         .get(normalizedEmail);
 
       if (recent?.created_at) {
@@ -67,19 +67,21 @@ export default async function handler(req, res) {
       const code = randomOtp();
       const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000).toISOString();
 
-      db.prepare(
-        `
-          INSERT INTO email_otp_sessions (email, otp_hash, expires_at)
-          VALUES (?, ?, ?)
-        `
-      ).run(normalizedEmail, hashOtp(code), expiresAt);
+      await db
+        .prepare(
+          `
+            INSERT INTO email_otp_sessions (email, otp_hash, expires_at)
+            VALUES (?, ?, ?)
+          `
+        )
+        .run(normalizedEmail, hashOtp(code), expiresAt);
 
       await sendOtpEmail(normalizedEmail, code);
       return res.status(200).json({ ok: true, message: 'OTP sent successfully' });
     }
 
     if (action === 'verify') {
-      if (!registrationsEnabled()) {
+      if (!(await registrationsEnabled())) {
         return res.status(403).json({ error: 'Registrations are currently closed by admin.' });
       }
 
@@ -88,7 +90,7 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'OTP must be 6 digits' });
       }
 
-      const session = db
+      const session = await db
         .prepare(
           `
             SELECT * FROM email_otp_sessions
@@ -108,12 +110,12 @@ export default async function handler(req, res) {
       }
 
       if (session.otp_hash !== hashOtp(providedOtp)) {
-        db.prepare('UPDATE email_otp_sessions SET attempts = attempts + 1 WHERE id = ?').run(session.id);
+        await db.prepare('UPDATE email_otp_sessions SET attempts = attempts + 1 WHERE id = ?').run(session.id);
         return res.status(400).json({ error: 'Invalid OTP' });
       }
 
       const verificationToken = crypto.randomUUID();
-      db
+      await db
         .prepare('UPDATE email_otp_sessions SET verified = 1, verification_token = ? WHERE id = ?')
         .run(verificationToken, session.id);
 

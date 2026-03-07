@@ -17,7 +17,7 @@ function validateParticipantInput(payload) {
   return null;
 }
 
-function checkDuplicate(field, value, currentId = null) {
+async function checkDuplicate(field, value, currentId = null) {
   if (!value) return false;
   if (currentId) {
     return db.prepare(`SELECT id FROM participants WHERE ${field} = ? AND id != ?`).get(value, currentId);
@@ -33,7 +33,7 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
-      const admin = requireAdmin(req, res);
+      const admin = await requireAdmin(req, res);
       if (!admin) return;
 
       const { search, branch } = req.query;
@@ -50,15 +50,12 @@ export default async function handler(req, res) {
         params.push(branch);
       }
 
-      const rows = db
-        .prepare(`SELECT * FROM participants WHERE ${where} ORDER BY registered_at DESC`)
-        .all(...params)
-        .map(toParticipant);
+      const rows = (await db.prepare(`SELECT * FROM participants WHERE ${where} ORDER BY registered_at DESC`).all(...params)).map(toParticipant);
       return res.status(200).json(rows);
     }
 
     if (req.method === 'POST') {
-      const registrationControl = db.prepare('SELECT enabled FROM registration_control WHERE id = 1').get();
+      const registrationControl = await db.prepare('SELECT enabled FROM registration_control WHERE id = 1').get();
       if (registrationControl && !registrationControl.enabled) {
         return res.status(403).json({ error: 'Registrations are currently closed by admin.' });
       }
@@ -72,7 +69,7 @@ export default async function handler(req, res) {
         return res.status(403).json({ error: 'Email OTP verification is required before registration' });
       }
 
-      const verifiedOtp = db
+      const verifiedOtp = await db
         .prepare(
           `
             SELECT id
@@ -88,20 +85,20 @@ export default async function handler(req, res) {
         return res.status(403).json({ error: 'Invalid or expired OTP verification. Please verify your email again.' });
       }
 
-      if (checkDuplicate('roll_number', roll_number)) {
+      if (await checkDuplicate('roll_number', roll_number)) {
         return res.status(409).json({ error: 'This roll number is already registered' });
       }
-      if (checkDuplicate('email', email)) {
+      if (await checkDuplicate('email', email)) {
         return res.status(409).json({ error: 'This email address is already registered' });
       }
-      if (checkDuplicate('payment_id', payment_id)) {
+      if (await checkDuplicate('payment_id', payment_id)) {
         return res.status(409).json({ error: 'This registration payment ID is already used' });
       }
-      if (checkDuplicate('whatsapp_number', whatsapp_number)) {
+      if (await checkDuplicate('whatsapp_number', whatsapp_number)) {
         return res.status(409).json({ error: 'This WhatsApp number is already registered' });
       }
 
-      const result = db
+      const result = await db
         .prepare(
           `
             INSERT INTO participants (email, full_name, roll_number, branch, year, skills, payment_id, whatsapp_number)
@@ -110,10 +107,10 @@ export default async function handler(req, res) {
         )
         .run(email, full_name, roll_number, branch, year, encodeSkills(skills), payment_id, whatsapp_number);
 
-      const row = db.prepare('SELECT * FROM participants WHERE id = ?').get(result.lastInsertRowid);
+      const row = await db.prepare('SELECT * FROM participants WHERE id = ?').get(result.lastInsertRowid);
       const participant = toParticipant(row);
 
-      writeActivity({
+      await writeActivity({
         entity_type: 'participant',
         entity_id: participant.id,
         action: 'registration_created',
@@ -126,7 +123,7 @@ export default async function handler(req, res) {
         },
       });
 
-      db.prepare('UPDATE email_otp_sessions SET consumed = 1 WHERE id = ?').run(verifiedOtp.id);
+      await db.prepare('UPDATE email_otp_sessions SET consumed = 1 WHERE id = ?').run(verifiedOtp.id);
 
       try {
         await sendRegistrationConfirmationEmail(participant);
@@ -138,32 +135,32 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'PUT') {
-      const admin = requireAdmin(req, res);
+      const admin = await requireAdmin(req, res);
       if (!admin) return;
 
       const { id, email, full_name, roll_number, branch, year, skills, payment_id, whatsapp_number } = req.body || {};
       if (!id) return res.status(400).json({ error: 'Participant ID required' });
 
-      const existing = db.prepare('SELECT * FROM participants WHERE id = ?').get(id);
+      const existing = await db.prepare('SELECT * FROM participants WHERE id = ?').get(id);
       if (!existing) return res.status(404).json({ error: 'Participant not found' });
 
       const validationError = validateParticipantInput({ email, full_name, roll_number, branch, year, skills, payment_id, whatsapp_number });
       if (validationError) return res.status(400).json({ error: validationError });
 
-      if (checkDuplicate('roll_number', roll_number, id)) {
+      if (await checkDuplicate('roll_number', roll_number, id)) {
         return res.status(409).json({ error: 'This roll number is already registered' });
       }
-      if (checkDuplicate('email', email, id)) {
+      if (await checkDuplicate('email', email, id)) {
         return res.status(409).json({ error: 'This email address is already registered' });
       }
-      if (checkDuplicate('payment_id', payment_id, id)) {
+      if (await checkDuplicate('payment_id', payment_id, id)) {
         return res.status(409).json({ error: 'This registration payment ID is already used' });
       }
-      if (checkDuplicate('whatsapp_number', whatsapp_number, id)) {
+      if (await checkDuplicate('whatsapp_number', whatsapp_number, id)) {
         return res.status(409).json({ error: 'This WhatsApp number is already registered' });
       }
 
-      db
+      await db
         .prepare(
           `
             UPDATE participants
@@ -173,10 +170,10 @@ export default async function handler(req, res) {
         )
         .run(email, full_name, roll_number, branch, year, encodeSkills(skills), payment_id, whatsapp_number, id);
 
-      const updated = toParticipant(db.prepare('SELECT * FROM participants WHERE id = ?').get(id));
+      const updated = toParticipant(await db.prepare('SELECT * FROM participants WHERE id = ?').get(id));
       const previous = toParticipant(existing);
 
-      writeActivity({
+      await writeActivity({
         entity_type: 'participant',
         entity_id: updated.id,
         action: 'registration_updated',
@@ -191,18 +188,18 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'DELETE') {
-      const admin = requireAdmin(req, res);
+      const admin = await requireAdmin(req, res);
       if (!admin) return;
 
       const { id } = req.body || {};
       if (!id) return res.status(400).json({ error: 'Participant ID required' });
 
-      const existing = db.prepare('SELECT * FROM participants WHERE id = ?').get(id);
+      const existing = await db.prepare('SELECT * FROM participants WHERE id = ?').get(id);
       if (!existing) return res.status(404).json({ error: 'Participant not found' });
 
-      db.prepare('DELETE FROM participants WHERE id = ?').run(id);
+      await db.prepare('DELETE FROM participants WHERE id = ?').run(id);
 
-      writeActivity({
+      await writeActivity({
         entity_type: 'participant',
         entity_id: Number(id),
         action: 'registration_deleted',

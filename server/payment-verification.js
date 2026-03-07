@@ -10,7 +10,7 @@ export default async function handler(req, res) {
   if (req.method !== 'PUT') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const admin = requireAdmin(req, res);
+    const admin = await requireAdmin(req, res);
     if (!admin) return;
 
     const { id, payment_verified } = req.body || {};
@@ -19,14 +19,14 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'payment_verified must be true or false' });
     }
 
-    const previous = db.prepare('SELECT * FROM participants WHERE id = ?').get(id);
+    const previous = await db.prepare('SELECT * FROM participants WHERE id = ?').get(id);
     if (!previous) return res.status(404).json({ error: 'Participant not found' });
 
-    db.prepare('UPDATE participants SET payment_verified = ? WHERE id = ?').run(payment_verified ? 1 : 0, id);
+    await db.prepare('UPDATE participants SET payment_verified = ? WHERE id = ?').run(payment_verified ? 1 : 0, id);
 
-    const updated = toParticipant(db.prepare('SELECT * FROM participants WHERE id = ?').get(id));
+    const updated = toParticipant(await db.prepare('SELECT * FROM participants WHERE id = ?').get(id));
 
-    writeActivity({
+    await writeActivity({
       entity_type: 'participant',
       entity_id: updated.id,
       action: payment_verified ? 'payment_verified' : 'payment_unverified',

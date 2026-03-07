@@ -79,13 +79,13 @@ async function resolvePublicDriveFolderMedia(folderId, fallbackType) {
   return Array.from(byId.values());
 }
 
-function insertMediaRecord({ mediaUrl, thumbUrl, caption, type, category, status, uploadedBy }) {
-  const result = db
+async function insertMediaRecord({ mediaUrl, thumbUrl, caption, type, category, status, uploadedBy }) {
+  const result = await db
     .prepare('INSERT INTO media (url, thumb_url, caption, type, category, status, uploaded_by) VALUES (?, ?, ?, ?, ?, ?, ?)')
     .run(mediaUrl, thumbUrl || mediaUrl, caption || '', type, category, status, uploadedBy);
 
-  const row = db.prepare('SELECT * FROM media WHERE id = ?').get(result.lastInsertRowid);
-  writeActivity({
+  const row = await db.prepare('SELECT * FROM media WHERE id = ?').get(result.lastInsertRowid);
+  await writeActivity({
     entity_type: 'media',
     entity_id: row.id,
     action: uploadedBy === 'public' ? 'media_submitted_public' : 'media_added_by_admin',
@@ -107,7 +107,7 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
-      const admin = getAdminFromRequest(req);
+      const admin = await getAdminFromRequest(req);
       const { category, status } = req.query;
       const params = [];
       let where = '1=1';
@@ -126,12 +126,12 @@ export default async function handler(req, res) {
         where += " AND status = 'approved'";
       }
 
-      const rows = db.prepare(`SELECT * FROM media WHERE ${where} ORDER BY uploaded_at DESC`).all(...params);
+      const rows = await db.prepare(`SELECT * FROM media WHERE ${where} ORDER BY uploaded_at DESC`).all(...params);
       return res.status(200).json(rows);
     }
 
     if (req.method === 'POST') {
-      const admin = getAdminFromRequest(req);
+      const admin = await getAdminFromRequest(req);
       const {
         url,
         thumb_url,
@@ -181,7 +181,7 @@ export default async function handler(req, res) {
 
             for (const entry of mediaEntries) {
               const urls = driveMediaUrls(entry.id);
-              const row = insertMediaRecord({
+              const row = await insertMediaRecord({
                 mediaUrl: urls.url,
                 thumbUrl: urls.thumb_url,
                 caption: caption || entry.name || '',
@@ -227,7 +227,7 @@ export default async function handler(req, res) {
       const uploadedBy = admin ? admin.email : 'public';
       const mediaThumb = String(thumb_url || '').trim();
 
-      const row = insertMediaRecord({
+      const row = await insertMediaRecord({
         mediaUrl,
         thumbUrl: thumbUrl || mediaThumb,
         caption,
@@ -241,7 +241,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'PUT') {
-      const admin = requireAdmin(req, res);
+      const admin = await requireAdmin(req, res);
       if (!admin) return;
 
       const { id, status, category } = req.body || {};
@@ -250,14 +250,14 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Invalid status' });
       }
 
-      const existing = db.prepare('SELECT * FROM media WHERE id = ?').get(id);
+      const existing = await db.prepare('SELECT * FROM media WHERE id = ?').get(id);
       if (!existing) return res.status(404).json({ error: 'Media not found' });
 
       const nextCategory = String(category || existing.category).trim() || existing.category;
-      db.prepare('UPDATE media SET status = ?, category = ? WHERE id = ?').run(status, nextCategory, id);
-      const updated = db.prepare('SELECT * FROM media WHERE id = ?').get(id);
+      await db.prepare('UPDATE media SET status = ?, category = ? WHERE id = ?').run(status, nextCategory, id);
+      const updated = await db.prepare('SELECT * FROM media WHERE id = ?').get(id);
 
-      writeActivity({
+      await writeActivity({
         entity_type: 'media',
         entity_id: updated.id,
         action: status === 'approved' ? 'media_approved' : status === 'rejected' ? 'media_rejected' : 'media_marked_pending',
@@ -275,18 +275,18 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'DELETE') {
-      const admin = requireAdmin(req, res);
+      const admin = await requireAdmin(req, res);
       if (!admin) return;
 
       const { id } = req.body || {};
       if (!id) return res.status(400).json({ error: 'Media ID required' });
 
-      const existing = db.prepare('SELECT * FROM media WHERE id = ?').get(id);
+      const existing = await db.prepare('SELECT * FROM media WHERE id = ?').get(id);
       if (!existing) return res.status(404).json({ error: 'Media not found' });
 
-      db.prepare('DELETE FROM media WHERE id = ?').run(id);
+      await db.prepare('DELETE FROM media WHERE id = ?').run(id);
 
-      writeActivity({
+      await writeActivity({
         entity_type: 'media',
         entity_id: Number(id),
         action: 'media_deleted',

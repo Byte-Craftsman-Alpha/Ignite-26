@@ -21,14 +21,11 @@ function pick(raw, aliases) {
   const entries = Object.entries(raw || {});
   const normalizedAliases = aliases.map((a) => normKey(a)).filter(Boolean);
 
-  // 1) Exact normalized key match.
   for (const [key, value] of entries) {
     const k = normKey(key);
     if (normalizedAliases.includes(k)) return value;
   }
 
-  // 2) Fuzzy fallback: form question labels often include extra words.
-  // Use only meaningful aliases to avoid accidental matches.
   const meaningfulAliases = normalizedAliases.filter((a) => a.length >= 5);
   for (const [key, value] of entries) {
     const k = normKey(key);
@@ -130,7 +127,7 @@ function validateRow(row) {
   return null;
 }
 
-function duplicate(field, value, currentId = null) {
+async function duplicate(field, value, currentId = null) {
   if (!value) return null;
   if (currentId) {
     return db.prepare(`SELECT id FROM participants WHERE ${field} = ? AND id != ? LIMIT 1`).get(value, currentId);
@@ -138,12 +135,12 @@ function duplicate(field, value, currentId = null) {
   return db.prepare(`SELECT id FROM participants WHERE ${field} = ? LIMIT 1`).get(value);
 }
 
-function detectExistingId(row) {
+async function detectExistingId(row) {
   const matches = new Set();
-  const byEmail = db.prepare('SELECT id FROM participants WHERE email = ? LIMIT 1').get(row.email);
-  const byRoll = db.prepare('SELECT id FROM participants WHERE roll_number = ? LIMIT 1').get(row.roll_number);
-  const byPayment = db.prepare('SELECT id FROM participants WHERE payment_id = ? LIMIT 1').get(row.payment_id);
-  const byWhatsapp = db.prepare('SELECT id FROM participants WHERE whatsapp_number = ? LIMIT 1').get(row.whatsapp_number);
+  const byEmail = await db.prepare('SELECT id FROM participants WHERE email = ? LIMIT 1').get(row.email);
+  const byRoll = await db.prepare('SELECT id FROM participants WHERE roll_number = ? LIMIT 1').get(row.roll_number);
+  const byPayment = await db.prepare('SELECT id FROM participants WHERE payment_id = ? LIMIT 1').get(row.payment_id);
+  const byWhatsapp = await db.prepare('SELECT id FROM participants WHERE whatsapp_number = ? LIMIT 1').get(row.whatsapp_number);
 
   if (byEmail?.id) matches.add(byEmail.id);
   if (byRoll?.id) matches.add(byRoll.id);
@@ -208,7 +205,7 @@ function getConfiguredSheetUrl() {
   return norm(process.env.GOOGLE_SHEET_SYNC_URL);
 }
 
-function syncRows(rawRows) {
+async function syncRows(rawRows) {
   let created = 0;
   let updated = 0;
   const failed = [];
@@ -223,71 +220,75 @@ function syncRows(rawRows) {
       continue;
     }
 
-    const existing = detectExistingId(row);
+    const existing = await detectExistingId(row);
     if (existing.conflict) {
       failed.push({ row: rowNumber, error: 'Conflicting unique fields map to different existing records' });
       continue;
     }
     const existingId = existing.existingId;
 
-    if (duplicate('roll_number', row.roll_number, existingId)) {
+    if (await duplicate('roll_number', row.roll_number, existingId)) {
       failed.push({ row: rowNumber, error: 'Duplicate roll number conflict' });
       continue;
     }
-    if (duplicate('email', row.email, existingId)) {
+    if (await duplicate('email', row.email, existingId)) {
       failed.push({ row: rowNumber, error: 'Duplicate email conflict' });
       continue;
     }
-    if (duplicate('payment_id', row.payment_id, existingId)) {
+    if (await duplicate('payment_id', row.payment_id, existingId)) {
       failed.push({ row: rowNumber, error: 'Duplicate payment ID conflict' });
       continue;
     }
-    if (duplicate('whatsapp_number', row.whatsapp_number, existingId)) {
+    if (await duplicate('whatsapp_number', row.whatsapp_number, existingId)) {
       failed.push({ row: rowNumber, error: 'Duplicate WhatsApp number conflict' });
       continue;
     }
 
     try {
       if (existingId) {
-        db.prepare(
-          `
-            UPDATE participants
-            SET email = ?, full_name = ?, roll_number = ?, branch = ?, year = ?, skills = ?, payment_id = ?, whatsapp_number = ?,
-                payment_verified = ?, check_in_status = ?
-            WHERE id = ?
-          `
-        ).run(
-          row.email,
-          row.full_name,
-          row.roll_number,
-          row.branch,
-          row.year,
-          encodeSkills(row.skills),
-          row.payment_id,
-          row.whatsapp_number,
-          row.payment_verified ? 1 : 0,
-          row.check_in_status ? 1 : 0,
-          existingId
-        );
+        await db
+          .prepare(
+            `
+              UPDATE participants
+              SET email = ?, full_name = ?, roll_number = ?, branch = ?, year = ?, skills = ?, payment_id = ?, whatsapp_number = ?,
+                  payment_verified = ?, check_in_status = ?
+              WHERE id = ?
+            `
+          )
+          .run(
+            row.email,
+            row.full_name,
+            row.roll_number,
+            row.branch,
+            row.year,
+            encodeSkills(row.skills),
+            row.payment_id,
+            row.whatsapp_number,
+            row.payment_verified ? 1 : 0,
+            row.check_in_status ? 1 : 0,
+            existingId
+          );
         updated += 1;
       } else {
-        db.prepare(
-          `
-            INSERT INTO participants (email, full_name, roll_number, branch, year, skills, payment_id, whatsapp_number, payment_verified, check_in_status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `
-        ).run(
-          row.email,
-          row.full_name,
-          row.roll_number,
-          row.branch,
-          row.year,
-          encodeSkills(row.skills),
-          row.payment_id,
-          row.whatsapp_number,
-          row.payment_verified ? 1 : 0,
-          row.check_in_status ? 1 : 0
-        );
+        await db
+          .prepare(
+            `
+              INSERT INTO participants (email, full_name, roll_number, branch, year, skills, payment_id, whatsapp_number, payment_verified, check_in_status)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `
+          )
+          .run(
+            row.email,
+            row.full_name,
+            row.roll_number,
+            row.branch,
+            row.year,
+            encodeSkills(row.skills),
+            row.payment_id,
+            row.whatsapp_number,
+            row.payment_verified ? 1 : 0,
+            row.check_in_status ? 1 : 0
+          );
         created += 1;
       }
     } catch (err) {
@@ -306,7 +307,7 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
-      const admin = requireAdmin(req, res);
+      const admin = await requireAdmin(req, res);
       if (!admin) return;
       return res.status(200).json({
         ok: true,
@@ -319,7 +320,7 @@ export default async function handler(req, res) {
       return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const admin = getAdminFromRequest(req);
+    const admin = await getAdminFromRequest(req);
     const webhookAuthorized = isWebhookAuthorized(req);
     if (!admin && !webhookAuthorized) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -350,9 +351,9 @@ export default async function handler(req, res) {
     }
 
     const total = rawRows.length;
-    const { created, updated, failed } = syncRows(rawRows);
+    const { created, updated, failed } = await syncRows(rawRows);
 
-    writeActivity({
+    await writeActivity({
       entity_type: 'participant',
       entity_id: null,
       action: 'registration_sheet_synced',

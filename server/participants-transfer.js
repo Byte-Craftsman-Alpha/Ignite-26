@@ -116,7 +116,7 @@ function validateParticipantRow(row) {
   return null;
 }
 
-function duplicate(field, value, currentId = null) {
+async function duplicate(field, value, currentId = null) {
   if (!value) return null;
   if (currentId) {
     return db.prepare(`SELECT id FROM participants WHERE ${field} = ? AND id != ? LIMIT 1`).get(value, currentId);
@@ -139,8 +139,8 @@ function toTransferRow(raw) {
   };
 }
 
-function participantsForExport() {
-  const rows = db.prepare('SELECT * FROM participants ORDER BY registered_at DESC').all().map(toParticipant);
+async function participantsForExport() {
+  const rows = (await db.prepare('SELECT * FROM participants ORDER BY registered_at DESC').all()).map(toParticipant);
   return rows.map((row) => ({
     id: row.id,
     full_name: row.full_name,
@@ -181,12 +181,12 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(204).end();
 
   try {
-    const admin = requireAdmin(req, res);
+    const admin = await requireAdmin(req, res);
     if (!admin) return;
 
     if (req.method === 'GET') {
       const format = String(req.query?.format || 'csv').toLowerCase();
-      const rows = participantsForExport();
+      const rows = await participantsForExport();
       const stamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 16);
 
       if (format === 'xlsx' || format === 'excel') {
@@ -239,70 +239,74 @@ export default async function handler(req, res) {
           continue;
         }
 
-        let existing = db.prepare('SELECT * FROM participants WHERE roll_number = ? LIMIT 1').get(row.roll_number);
+        let existing = await db.prepare('SELECT * FROM participants WHERE roll_number = ? LIMIT 1').get(row.roll_number);
         if (!existing) {
-          existing = db.prepare('SELECT * FROM participants WHERE email = ? LIMIT 1').get(row.email);
+          existing = await db.prepare('SELECT * FROM participants WHERE email = ? LIMIT 1').get(row.email);
         }
         const existingId = existing?.id || null;
 
-        if (duplicate('roll_number', row.roll_number, existingId)) {
+        if (await duplicate('roll_number', row.roll_number, existingId)) {
           failed.push({ row: rowNum, error: 'Duplicate roll number conflict' });
           continue;
         }
-        if (duplicate('email', row.email, existingId)) {
+        if (await duplicate('email', row.email, existingId)) {
           failed.push({ row: rowNum, error: 'Duplicate email conflict' });
           continue;
         }
-        if (duplicate('payment_id', row.payment_id, existingId)) {
+        if (await duplicate('payment_id', row.payment_id, existingId)) {
           failed.push({ row: rowNum, error: 'Duplicate payment ID conflict' });
           continue;
         }
-        if (duplicate('whatsapp_number', row.whatsapp_number, existingId)) {
+        if (await duplicate('whatsapp_number', row.whatsapp_number, existingId)) {
           failed.push({ row: rowNum, error: 'Duplicate WhatsApp number conflict' });
           continue;
         }
 
         try {
           if (existingId) {
-            db.prepare(
-              `
-                UPDATE participants
-                SET email = ?, full_name = ?, roll_number = ?, branch = ?, year = ?, skills = ?, payment_id = ?, whatsapp_number = ?,
-                    payment_verified = ?, check_in_status = ?
-                WHERE id = ?
-              `
-            ).run(
-              row.email,
-              row.full_name,
-              row.roll_number,
-              row.branch,
-              row.year,
-              encodeSkills(row.skills),
-              row.payment_id,
-              row.whatsapp_number,
-              row.payment_verified ? 1 : 0,
-              row.check_in_status ? 1 : 0,
-              existingId
-            );
+            await db
+              .prepare(
+                `
+                  UPDATE participants
+                  SET email = ?, full_name = ?, roll_number = ?, branch = ?, year = ?, skills = ?, payment_id = ?, whatsapp_number = ?,
+                      payment_verified = ?, check_in_status = ?
+                  WHERE id = ?
+                `
+              )
+              .run(
+                row.email,
+                row.full_name,
+                row.roll_number,
+                row.branch,
+                row.year,
+                encodeSkills(row.skills),
+                row.payment_id,
+                row.whatsapp_number,
+                row.payment_verified ? 1 : 0,
+                row.check_in_status ? 1 : 0,
+                existingId
+              );
             updated += 1;
           } else {
-            db.prepare(
-              `
-                INSERT INTO participants (email, full_name, roll_number, branch, year, skills, payment_id, whatsapp_number, payment_verified, check_in_status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-              `
-            ).run(
-              row.email,
-              row.full_name,
-              row.roll_number,
-              row.branch,
-              row.year,
-              encodeSkills(row.skills),
-              row.payment_id,
-              row.whatsapp_number,
-              row.payment_verified ? 1 : 0,
-              row.check_in_status ? 1 : 0
-            );
+            await db
+              .prepare(
+                `
+                  INSERT INTO participants (email, full_name, roll_number, branch, year, skills, payment_id, whatsapp_number, payment_verified, check_in_status)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `
+              )
+              .run(
+                row.email,
+                row.full_name,
+                row.roll_number,
+                row.branch,
+                row.year,
+                encodeSkills(row.skills),
+                row.payment_id,
+                row.whatsapp_number,
+                row.payment_verified ? 1 : 0,
+                row.check_in_status ? 1 : 0
+              );
             created += 1;
           }
         } catch (err) {
@@ -310,7 +314,7 @@ export default async function handler(req, res) {
         }
       }
 
-      writeActivity({
+      await writeActivity({
         entity_type: 'participant',
         entity_id: null,
         action: 'registration_imported',
@@ -334,4 +338,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: err.message });
   }
 }
-

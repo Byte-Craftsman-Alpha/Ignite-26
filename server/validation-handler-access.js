@@ -2,15 +2,16 @@ import crypto from 'crypto';
 import db from './_db.js';
 import { requireAdmin } from './_auth.js';
 
-function loadAccess() {
-  let row = db.prepare('SELECT * FROM validation_handler_access WHERE id = 1').get();
+async function loadAccess() {
+  let row = await db.prepare('SELECT * FROM validation_handler_access WHERE id = 1').get();
   if (!row) {
     const now = new Date().toISOString();
     const token = crypto.randomBytes(24).toString('hex');
     const passwordHash = crypto.createHash('sha256').update('ignite-handler-26').digest('hex');
-    db.prepare('INSERT INTO validation_handler_access (id, token, enabled, password_hash, updated_at) VALUES (1, ?, 0, ?, ?)')
+    await db
+      .prepare('INSERT INTO validation_handler_access (id, token, enabled, password_hash, updated_at) VALUES (1, ?, 0, ?, ?)')
       .run(token, passwordHash, now);
-    row = db.prepare('SELECT * FROM validation_handler_access WHERE id = 1').get();
+    row = await db.prepare('SELECT * FROM validation_handler_access WHERE id = 1').get();
   }
   return row;
 }
@@ -35,16 +36,16 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(204).end();
 
   try {
-    const admin = requireAdmin(req, res);
+    const admin = await requireAdmin(req, res);
     if (!admin) return;
 
     if (req.method === 'GET') {
-      return res.status(200).json(toPayload(loadAccess()));
+      return res.status(200).json(toPayload(await loadAccess()));
     }
 
     if (req.method === 'POST') {
       const { enabled, regenerate, password } = req.body || {};
-      const current = loadAccess();
+      const current = await loadAccess();
       let nextToken = String(current.token || '');
       let nextEnabled = Boolean(current.enabled);
       let nextPasswordHash = String(current.password_hash || '');
@@ -56,10 +57,11 @@ export default async function handler(req, res) {
       }
 
       const now = new Date().toISOString();
-      db.prepare('UPDATE validation_handler_access SET token = ?, enabled = ?, password_hash = ?, updated_at = ? WHERE id = 1')
+      await db
+        .prepare('UPDATE validation_handler_access SET token = ?, enabled = ?, password_hash = ?, updated_at = ? WHERE id = 1')
         .run(nextToken, nextEnabled ? 1 : 0, nextPasswordHash, now);
 
-      return res.status(200).json(toPayload(loadAccess()));
+      return res.status(200).json(toPayload(await loadAccess()));
     }
 
     return res.status(405).json({ error: 'Method not allowed' });

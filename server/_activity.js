@@ -1,13 +1,13 @@
 import db from './_db.js';
 
-export function writeActivity({
+export async function writeActivity({
   entity_type,
   entity_id = null,
   action,
   actor_email,
   details = null,
 }) {
-  db.prepare(
+  return db.prepare(
     `
       INSERT INTO activity_logs (entity_type, entity_id, action, actor_email, details)
       VALUES (?, ?, ?, ?, ?)

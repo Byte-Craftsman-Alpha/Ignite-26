@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     const { roll_number, whatsapp_number } = req.body;
     if (!roll_number || !whatsapp_number) return res.status(400).json({ error: 'Roll number and WhatsApp number required' });
 
-    const row = db
+    const row = await db
       .prepare('SELECT * FROM participants WHERE roll_number = ? AND whatsapp_number = ? LIMIT 1')
       .get(roll_number, whatsapp_number);
 

@@ -10,26 +10,26 @@ export default async function handler(req, res) {
   if (req.method !== 'PUT') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const admin = requireAdmin(req, res);
+    const admin = await requireAdmin(req, res);
     if (!admin) return;
 
     const { id, check_in_status } = req.body;
     if (!id) return res.status(400).json({ error: 'Participant ID required' });
 
-    const previous = db.prepare('SELECT * FROM participants WHERE id = ?').get(id);
+    const previous = await db.prepare('SELECT * FROM participants WHERE id = ?').get(id);
     if (!previous) return res.status(404).json({ error: 'Participant not found' });
 
     const checkInTime = check_in_status ? new Date().toISOString() : null;
-    const result = db
+    const result = await db
       .prepare('UPDATE participants SET check_in_status = ?, check_in_time = ? WHERE id = ?')
       .run(check_in_status ? 1 : 0, checkInTime, id);
 
     if (result.changes === 0) return res.status(404).json({ error: 'Participant not found' });
 
-    const row = db.prepare('SELECT * FROM participants WHERE id = ?').get(id);
+    const row = await db.prepare('SELECT * FROM participants WHERE id = ?').get(id);
     const updated = toParticipant(row);
 
-    writeActivity({
+    await writeActivity({
       entity_type: 'participant',
       entity_id: updated.id,
       action: check_in_status ? 'checkin_marked' : 'checkin_reverted',

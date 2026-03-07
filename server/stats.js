@@ -9,10 +9,10 @@ export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const admin = requireAdmin(req, res);
+    const admin = await requireAdmin(req, res);
     if (!admin) return;
 
-    const participants = db.prepare('SELECT id, check_in_status, branch, year FROM participants').all();
+    const participants = await db.prepare('SELECT id, check_in_status, branch, year FROM participants').all();
 
     const total = participants.length;
     const checkedIn = participants.filter(p => Boolean(p.check_in_status)).length;

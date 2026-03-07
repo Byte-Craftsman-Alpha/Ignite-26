@@ -13,12 +13,12 @@ function normalizePhone(value) {
   return digits;
 }
 
-function loadAccess() {
+async function loadAccess() {
   return db.prepare('SELECT * FROM validation_handler_access WHERE id = 1').get();
 }
 
-function isAuthorized(token, password) {
-  const access = loadAccess();
+async function isAuthorized(token, password) {
+  const access = await loadAccess();
   if (!access || !access.enabled) return false;
   if (String(access.token || '') !== normalize(token)) return false;
   const passwordHash = crypto.createHash('sha256').update(normalize(password)).digest('hex');
@@ -48,36 +48,36 @@ function parsePayloadToLookupValue(payload) {
   return raw;
 }
 
-function findParticipants(value) {
+async function findParticipants(value) {
   const lookup = normalize(value);
   if (!lookup) return [];
 
   if (/^\d+$/.test(lookup)) {
-    const byId = db.prepare('SELECT * FROM participants WHERE id = ? LIMIT 1').get(Number(lookup));
+    const byId = await db.prepare('SELECT * FROM participants WHERE id = ? LIMIT 1').get(Number(lookup));
     if (byId) return [toParticipant(byId)];
 
     const digits = normalizePhone(lookup);
     if (/^\d{13}$/.test(lookup)) {
-      const byRoll = db.prepare('SELECT * FROM participants WHERE roll_number = ? LIMIT 1').get(lookup);
+      const byRoll = await db.prepare('SELECT * FROM participants WHERE roll_number = ? LIMIT 1').get(lookup);
       if (byRoll) return [toParticipant(byRoll)];
     }
     if (/^\d{10}$/.test(digits)) {
-      const byPhone = db.prepare('SELECT * FROM participants WHERE whatsapp_number = ? LIMIT 1').get(digits);
+      const byPhone = await db.prepare('SELECT * FROM participants WHERE whatsapp_number = ? LIMIT 1').get(digits);
       if (byPhone) return [toParticipant(byPhone)];
     }
   }
 
   const email = lookup.toLowerCase();
   if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    const byEmail = db.prepare('SELECT * FROM participants WHERE lower(email) = lower(?) LIMIT 1').get(email);
+    const byEmail = await db.prepare('SELECT * FROM participants WHERE lower(email) = lower(?) LIMIT 1').get(email);
     if (byEmail) return [toParticipant(byEmail)];
   }
 
-  const byPayment = db.prepare('SELECT * FROM participants WHERE payment_id = ? LIMIT 1').get(lookup);
+  const byPayment = await db.prepare('SELECT * FROM participants WHERE payment_id = ? LIMIT 1').get(lookup);
   if (byPayment) return [toParticipant(byPayment)];
 
   const needle = `%${lookup}%`;
-  return db
+  return (await db
     .prepare(
       `
         SELECT *
@@ -87,8 +87,7 @@ function findParticipants(value) {
         LIMIT 20
       `
     )
-    .all(needle, needle, needle, needle, needle)
-    .map(toParticipant);
+    .all(needle, needle, needle, needle, needle)).map(toParticipant);
 }
 
 export default async function handler(req, res) {
@@ -100,7 +99,7 @@ export default async function handler(req, res) {
 
   try {
     const { token, password, action } = req.body || {};
-    if (!isAuthorized(token, password)) {
+    if (!(await isAuthorized(token, password))) {
       return res.status(401).json({ error: 'Invalid handler access or password' });
     }
 
@@ -111,7 +110,7 @@ export default async function handler(req, res) {
     if (action === 'lookup') {
       const value = parsePayloadToLookupValue(req.body?.qr_text || req.body?.query || '');
       if (!value) return res.status(400).json({ error: 'query or qr_text is required' });
-      const rows = findParticipants(value);
+      const rows = await findParticipants(value);
       return res.status(200).json({ ok: true, rows, count: rows.length });
     }
 
@@ -119,7 +118,7 @@ export default async function handler(req, res) {
       const participantId = Number(req.body?.participant_id);
       if (!participantId) return res.status(400).json({ error: 'participant_id is required' });
 
-      const existing = db.prepare('SELECT * FROM participants WHERE id = ? LIMIT 1').get(participantId);
+      const existing = await db.prepare('SELECT * FROM participants WHERE id = ? LIMIT 1').get(participantId);
       if (!existing) return res.status(404).json({ error: 'Participant not found' });
 
       const hasPayment = typeof req.body?.payment_verified === 'boolean';
@@ -132,15 +131,17 @@ export default async function handler(req, res) {
       const checkinStatus = hasCheckin ? (req.body.check_in_status ? 1 : 0) : existing.check_in_status;
       const checkinTime = hasCheckin ? (req.body.check_in_status ? new Date().toISOString() : null) : existing.check_in_time;
 
-      db.prepare(
-        `
-          UPDATE participants
-          SET payment_verified = ?, check_in_status = ?, check_in_time = ?
-          WHERE id = ?
-        `
-      ).run(paymentVerified, checkinStatus, checkinTime, participantId);
+      await db
+        .prepare(
+          `
+            UPDATE participants
+            SET payment_verified = ?, check_in_status = ?, check_in_time = ?
+            WHERE id = ?
+          `
+        )
+        .run(paymentVerified, checkinStatus, checkinTime, participantId);
 
-      const updated = toParticipant(db.prepare('SELECT * FROM participants WHERE id = ?').get(participantId));
+      const updated = toParticipant(await db.prepare('SELECT * FROM participants WHERE id = ?').get(participantId));
       return res.status(200).json({ ok: true, participant: updated });
     }
 

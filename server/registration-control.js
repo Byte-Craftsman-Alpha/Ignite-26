@@ -2,11 +2,11 @@ import db from './_db.js';
 import { requireAdmin } from './_auth.js';
 import { writeActivity } from './_activity.js';
 
-function getRow() {
-  let row = db.prepare('SELECT * FROM registration_control WHERE id = 1').get();
+async function getRow() {
+  let row = await db.prepare('SELECT * FROM registration_control WHERE id = 1').get();
   if (!row) {
-    db.prepare('INSERT INTO registration_control (id, enabled, updated_at) VALUES (1, 1, ?)').run(new Date().toISOString());
-    row = db.prepare('SELECT * FROM registration_control WHERE id = 1').get();
+    await db.prepare('INSERT INTO registration_control (id, enabled, updated_at) VALUES (1, 1, ?)').run(new Date().toISOString());
+    row = await db.prepare('SELECT * FROM registration_control WHERE id = 1').get();
   }
   return row;
 }
@@ -18,11 +18,11 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(204).end();
 
   try {
-    const admin = requireAdmin(req, res);
+    const admin = await requireAdmin(req, res);
     if (!admin) return;
 
     if (req.method === 'GET') {
-      const row = getRow();
+      const row = await getRow();
       return res.status(200).json({ enabled: Boolean(row.enabled), updated_at: row.updated_at || null });
     }
 
@@ -33,9 +33,9 @@ export default async function handler(req, res) {
       }
 
       const now = new Date().toISOString();
-      db.prepare('UPDATE registration_control SET enabled = ?, updated_at = ? WHERE id = 1').run(enabled ? 1 : 0, now);
+      await db.prepare('UPDATE registration_control SET enabled = ?, updated_at = ? WHERE id = 1').run(enabled ? 1 : 0, now);
 
-      writeActivity({
+      await writeActivity({
         entity_type: 'registration_control',
         entity_id: 1,
         action: enabled ? 'registrations_enabled' : 'registrations_disabled',
@@ -52,4 +52,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: err.message });
   }
 }
-

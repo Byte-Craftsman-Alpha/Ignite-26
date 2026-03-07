@@ -30,15 +30,12 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
-      const rows = db
-        .prepare('SELECT * FROM management_team ORDER BY name ASC')
-        .all()
-        .map(toManagementMember);
+      const rows = (await db.prepare('SELECT * FROM management_team ORDER BY name ASC').all()).map(toManagementMember);
       return res.status(200).json(rows);
     }
 
     if (req.method === 'POST') {
-      const admin = requireAdmin(req, res);
+      const admin = await requireAdmin(req, res);
       if (!admin) return;
 
       const validationError = validate(req.body || {});
@@ -46,7 +43,7 @@ export default async function handler(req, res) {
 
       const { name, branch, year, roles, fields, whatsapp_number, profile_image } = req.body;
 
-      const result = db
+      const result = await db
         .prepare(
           `
             INSERT INTO management_team (name, branch, year, roles, fields, profile_image, whatsapp_number, updated_at)
@@ -55,9 +52,9 @@ export default async function handler(req, res) {
         )
         .run(name, branch, year, encodeRoles(roles), fields, profile_image || '', whatsapp_number);
 
-      const row = toManagementMember(db.prepare('SELECT * FROM management_team WHERE id = ?').get(result.lastInsertRowid));
+      const row = toManagementMember(await db.prepare('SELECT * FROM management_team WHERE id = ?').get(result.lastInsertRowid));
 
-      writeActivity({
+      await writeActivity({
         entity_type: 'management_team',
         entity_id: row.id,
         action: 'management_member_created',
@@ -69,19 +66,19 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'PUT') {
-      const admin = requireAdmin(req, res);
+      const admin = await requireAdmin(req, res);
       if (!admin) return;
 
       const { id, name, branch, year, roles, fields, whatsapp_number, profile_image } = req.body || {};
       if (!id) return res.status(400).json({ error: 'Member ID required' });
 
-      const existing = db.prepare('SELECT * FROM management_team WHERE id = ?').get(id);
+      const existing = await db.prepare('SELECT * FROM management_team WHERE id = ?').get(id);
       if (!existing) return res.status(404).json({ error: 'Member not found' });
 
       const validationError = validate({ name, branch, year, roles, fields, whatsapp_number, profile_image });
       if (validationError) return res.status(400).json({ error: validationError });
 
-      db
+      await db
         .prepare(
           `
             UPDATE management_team
@@ -91,9 +88,9 @@ export default async function handler(req, res) {
         )
         .run(name, branch, year, encodeRoles(roles), fields, profile_image || '', whatsapp_number, id);
 
-      const updated = toManagementMember(db.prepare('SELECT * FROM management_team WHERE id = ?').get(id));
+      const updated = toManagementMember(await db.prepare('SELECT * FROM management_team WHERE id = ?').get(id));
 
-      writeActivity({
+      await writeActivity({
         entity_type: 'management_team',
         entity_id: updated.id,
         action: 'management_member_updated',
@@ -108,18 +105,18 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'DELETE') {
-      const admin = requireAdmin(req, res);
+      const admin = await requireAdmin(req, res);
       if (!admin) return;
 
       const { id } = req.body || {};
       if (!id) return res.status(400).json({ error: 'Member ID required' });
 
-      const existing = db.prepare('SELECT * FROM management_team WHERE id = ?').get(id);
+      const existing = await db.prepare('SELECT * FROM management_team WHERE id = ?').get(id);
       if (!existing) return res.status(404).json({ error: 'Member not found' });
 
-      db.prepare('DELETE FROM management_team WHERE id = ?').run(id);
+      await db.prepare('DELETE FROM management_team WHERE id = ?').run(id);
 
-      writeActivity({
+      await writeActivity({
         entity_type: 'management_team',
         entity_id: Number(id),
         action: 'management_member_deleted',

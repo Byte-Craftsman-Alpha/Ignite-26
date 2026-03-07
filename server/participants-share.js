@@ -3,13 +3,15 @@ import db from './_db.js';
 import { requireAdmin } from './_auth.js';
 import { writeActivity } from './_activity.js';
 
-function ensureShareAccessRow() {
-  let row = db.prepare('SELECT * FROM participant_share_access WHERE id = 1').get();
+async function ensureShareAccessRow() {
+  let row = await db.prepare('SELECT * FROM participant_share_access WHERE id = 1').get();
   if (!row) {
     const token = crypto.randomBytes(24).toString('hex');
-    db.prepare('INSERT INTO participant_share_access (id, token, enabled, updated_at) VALUES (1, ?, 0, ?)')
-      .run(token, new Date().toISOString());
-    row = db.prepare('SELECT * FROM participant_share_access WHERE id = 1').get();
+    await db.prepare('INSERT INTO participant_share_access (id, token, enabled, updated_at) VALUES (1, ?, 0, ?)').run(
+      token,
+      new Date().toISOString()
+    );
+    row = await db.prepare('SELECT * FROM participant_share_access WHERE id = 1').get();
   }
   return row;
 }
@@ -34,17 +36,17 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(204).end();
 
   try {
-    const admin = requireAdmin(req, res);
+    const admin = await requireAdmin(req, res);
     if (!admin) return;
 
     if (req.method === 'GET') {
-      const row = ensureShareAccessRow();
+      const row = await ensureShareAccessRow();
       return res.status(200).json(toResponsePayload(row));
     }
 
     if (req.method === 'POST') {
       const { enabled, regenerate } = req.body || {};
-      const current = ensureShareAccessRow();
+      const current = await ensureShareAccessRow();
 
       let nextEnabled = current.enabled ? 1 : 0;
       let nextToken = String(current.token || '');
@@ -65,10 +67,13 @@ export default async function handler(req, res) {
       }
 
       const now = new Date().toISOString();
-      db.prepare('UPDATE participant_share_access SET token = ?, enabled = ?, updated_at = ? WHERE id = 1')
-        .run(nextToken, nextEnabled, now);
+      await db.prepare('UPDATE participant_share_access SET token = ?, enabled = ?, updated_at = ? WHERE id = 1').run(
+        nextToken,
+        nextEnabled,
+        now
+      );
 
-      writeActivity({
+      await writeActivity({
         entity_type: 'participant_share_access',
         entity_id: 1,
         action,
@@ -79,7 +84,7 @@ export default async function handler(req, res) {
         },
       });
 
-      const updated = db.prepare('SELECT * FROM participant_share_access WHERE id = 1').get();
+      const updated = await db.prepare('SELECT * FROM participant_share_access WHERE id = 1').get();
       return res.status(200).json(toResponsePayload(updated));
     }
 
@@ -89,4 +94,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: err.message });
   }
 }
-
