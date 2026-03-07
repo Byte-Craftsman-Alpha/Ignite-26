@@ -1,8 +1,13 @@
 # Ignite 26
 
 Frontend: React + TypeScript + Vite  
-Backend/API routes: serverless handlers in `api/` (SQLite-backed)
+Backend/API routes: one Vercel catch-all function in `api/[...route].js`, with handlers stored in `server/` (SQLite-backed)
 
+## Vercel Hobby Plan
+
+- Keep only the catch-all entrypoint in `api/[...route].js`
+- Add new backend handlers under `server/`, then register them in `server/router.js`
+- Do not add extra executable files under `api/`, or Vercel will count them as more Serverless Functions
 ## Prerequisites
 
 - Node.js 20+ (LTS recommended)
@@ -91,3 +96,4 @@ function pushLatestRows(rows) {
   });
 }
 ```
+

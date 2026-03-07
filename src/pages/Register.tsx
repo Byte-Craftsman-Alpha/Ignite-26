@@ -29,7 +29,7 @@ interface FormData {
   whatsapp_number: string;
 }
 
-const BRANCHES = ['CSE Core', 'CSE AI/ML', 'IT', 'ECE', 'ME'];
+const BRANCHES = ['Computer Science and Engineering (CSE Core)', 'Computer Science and Engineering (CSE AI/ML)', 'Information Technology (IT)', 'Electronics and Communication Engineering (ECE)', 'Mechanical Engineering (ME)'];
 const YEARS = ['1st Year', '2nd Year'];
 const SKILLS = ['Singing', 'Games/Fun Activities', 'Dance', 'Comedy/Standup', 'Others'];
 

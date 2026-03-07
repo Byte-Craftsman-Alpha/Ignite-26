@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "concurrently -k \"npm:dev:api\" \"npm:dev:vite\"",
     "dev:vite": "vite --host 127.0.0.1 --port 5173 --strictPort",
-    "dev:api": "node api/dev-server.js",
+    "dev:api": "node server/dev-server.js",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
@@ -47,3 +47,4 @@
     "vite": "^7.3.1"
   }
 }
+
