@@ -43,6 +43,15 @@ const routeHandlers = new Map([
 ]);
 
 function normalizeApiPath(req) {
+  const rewrittenPath = req?.query?.path;
+  if (typeof rewrittenPath === 'string' && rewrittenPath) {
+    return `/${rewrittenPath.replace(/^\/+|\/+$/g, '')}`;
+  }
+
+  if (Array.isArray(rewrittenPath) && rewrittenPath.length > 0) {
+    return `/${rewrittenPath.join('/').replace(/^\/+|\/+$/g, '')}`;
+  }
+
   if (req.baseUrl === '/api' && typeof req.path === 'string') {
     const path = req.path || '/';
     return path === '/' ? '/' : path.replace(/\/+$/, '') || '/';
