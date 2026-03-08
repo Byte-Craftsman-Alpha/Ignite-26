@@ -96,5 +96,66 @@ function pushLatestRows(rows) {
   });
 }
 ```
+## Sync google form response to database
 
+```javascript
+const API_URL = 'API_ENDPOINT'; // or your local tunnel URL
+const SECRET = 'SECRET_KEY'; // same as .env SHEET_SYNC_SECRET
+const SHEET_NAME = 'SHEET_NAME'; // change if needed
 
+function onFormSubmit(e) {
+  const row = e && e.namedValues ? namedValuesToRow(e.namedValues) : null;
+  if (!row) return;
+  pushRows([row]);
+}
+
+function syncAllRowsNow() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  if (!sheet) throw new Error(`Sheet not found: ${SHEET_NAME}`);
+
+  const values = sheet.getDataRange().getValues();
+  if (values.length < 2) return;
+
+  const headers = values[0].map(h => String(h || '').trim());
+  const allRows = values.slice(1).map(r => rowArrayToObject(headers, r));
+  
+  // CHUNK CONFIGURATION
+  const chunkSize = 1; // Try 50 rows at a time
+  for (let i = 0; i < allRows.length; i += chunkSize) {
+    const chunk = allRows.slice(i, i + chunkSize);
+    Logger.log(`Syncing rows ${i + 1} of ${allRows.length}...`);
+    pushRows(chunk);
+  }
+}
+
+function pushRows(rows) {
+  Logger.log(rows);
+  const res = UrlFetchApp.fetch(API_URL, {
+    method: 'post',
+    contentType: 'application/json',
+    headers: { 'X-Sheet-Sync-Secret': SECRET },
+    payload: JSON.stringify({ rows }),
+    muteHttpExceptions: true
+  });
+
+  Logger.log(`Sync status: ${res.getResponseCode()}`);
+  Logger.log(res.getContentText());
+}
+
+function namedValuesToRow(namedValues) {
+  const out = {};
+  Object.keys(namedValues).forEach(k => {
+    const val = namedValues[k];
+    out[k] = Array.isArray(val) ? val.join(', ') : String(val || '');
+  });
+  return out;
+}
+
+function rowArrayToObject(headers, row) {
+  const out = {};
+  headers.forEach((h, i) => {
+    out[h] = row[i] == null ? '' : String(row[i]);
+  });
+  return out;
+}
+```
