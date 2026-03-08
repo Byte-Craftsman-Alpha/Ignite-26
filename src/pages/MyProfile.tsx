@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { User, Hash, Phone, CheckCircle, XCircle, Search, QrCode, Download, Share2, FileDown, AlertCircle, Users } from 'lucide-react';
+import { User, Hash, Phone, Mail, CheckCircle, XCircle, Search, QrCode, Download, Share2, FileDown, AlertCircle, Users } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import QRCode from 'qrcode';
 import { getErrorMessage, readJsonSafe } from '../lib/http';
@@ -50,6 +50,7 @@ async function dataUrlToFile(dataUrl: string, name: string) {
 }
 
 export default function MyProfile() {
+  const [email, setEmail] = useState('');
   const [rollNumber, setRollNumber] = useState('');
   const [whatsappNumber, setWhatsappNumber] = useState('');
   const [loading, setLoading] = useState(false);
@@ -86,7 +87,11 @@ export default function MyProfile() {
       const res = await fetch('/api/participant-lookup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roll_number: rollNumber.trim(), whatsapp_number: whatsappNumber.trim() }),
+        body: JSON.stringify({
+          email: email.trim(),
+          roll_number: rollNumber.trim(),
+          whatsapp_number: whatsappNumber.trim(),
+        }),
       });
       const data = await readJsonSafe<Participant & { error?: string }>(res);
       if (!res.ok) throw new Error(getErrorMessage(data, 'Unable to find profile'));
@@ -314,11 +319,24 @@ export default function MyProfile() {
               <User size={28} className="text-purple-400" />
             </div>
             <h1 className="text-4xl font-black mb-2">My Profile</h1>
-            <p className="text-gray-400">Enter your roll number and WhatsApp number to view your registration.</p>
+            <p className="text-gray-400">Enter your email, roll number, and WhatsApp number to view your registration.</p>
           </div>
 
           <form onSubmit={handleLookup} className="bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-2xl p-6 mb-6">
             <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1.5">Email Address</label>
+                <div className="relative">
+                  <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="yourname@example.com"
+                    className="w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#ff2d78]"
+                  />
+                </div>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1.5">Complete Roll Number</label>
                 <div className="relative">

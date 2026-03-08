@@ -6,6 +6,8 @@ import { createClient } from '@libsql/client';
 
 const adminEmail = String(process.env.ADMIN_EMAIL || 'admin@ignite26.edu.in').trim().toLowerCase();
 const adminPassword = String(process.env.ADMIN_PASSWORD || 'admin123');
+const tursoUrl = String(process.env.TURSO_DATABASE_URL || '').trim();
+const tursoAuthToken = String(process.env.TURSO_AUTH_TOKEN || '').trim() || undefined;
 
 function hashPassword(password) {
   const salt = crypto.randomBytes(16);
@@ -13,20 +15,27 @@ function hashPassword(password) {
   return `${salt.toString('hex')}:${key.toString('hex')}`;
 }
 
-function resolveDatabaseUrl() {
-  const tursoUrl = String(process.env.TURSO_DATABASE_URL || '').trim();
-  if (tursoUrl) return tursoUrl;
-
+function resolveLocalDatabaseUrl() {
   const configuredPath = String(process.env.SQLITE_DB_PATH || path.join(process.cwd(), 'data', 'ignite26.db')).trim();
   const absolutePath = path.isAbsolute(configuredPath) ? configuredPath : path.join(process.cwd(), configuredPath);
   fs.mkdirSync(path.dirname(absolutePath), { recursive: true });
   return pathToFileURL(absolutePath).href;
 }
 
-const client = createClient({
-  url: resolveDatabaseUrl(),
-  authToken: String(process.env.TURSO_AUTH_TOKEN || '').trim() || undefined,
+const localDatabaseUrl = resolveLocalDatabaseUrl();
+let activeDatabaseUrl = tursoUrl || localDatabaseUrl;
+let activeClient = createClient({
+  url: activeDatabaseUrl,
+  authToken: activeDatabaseUrl === tursoUrl ? tursoAuthToken : undefined,
 });
+
+function switchToLocalDatabase(error) {
+  if (activeDatabaseUrl === localDatabaseUrl || !tursoUrl) return false;
+  console.warn(`[db] Remote database unavailable (${error?.cause?.code || error?.code || error?.message || 'unknown error'}). Falling back to local SQLite at ${localDatabaseUrl}`);
+  activeDatabaseUrl = localDatabaseUrl;
+  activeClient = createClient({ url: localDatabaseUrl });
+  return true;
+}
 
 function normalizeRow(row) {
   if (!row) return null;
@@ -38,7 +47,13 @@ function normalizeRows(rows) {
 }
 
 async function executeStatement(sql, args = []) {
-  const result = await client.execute({ sql, args });
+  let result;
+  try {
+    result = await activeClient.execute({ sql, args });
+  } catch (error) {
+    if (!switchToLocalDatabase(error)) throw error;
+    result = await activeClient.execute({ sql, args });
+  }
   return {
     rows: normalizeRows(result.rows),
     rowsAffected: Number(result.rowsAffected || 0),

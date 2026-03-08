@@ -78,6 +78,13 @@ interface ActionMenuState {
   openUp: boolean;
 }
 
+interface PanelMenuState {
+  menu: 'shortcuts' | 'data' | 'share' | 'handler';
+  top: number;
+  left: number;
+  openUp: boolean;
+}
+
 interface ParticipantForm {
   email: string;
   full_name: string;
@@ -126,7 +133,6 @@ export default function AdminDashboard() {
   const [editError, setEditError] = useState('');
   const [transferLoading, setTransferLoading] = useState<'csv' | 'xlsx' | 'import' | null>(null);
   const [transferMessage, setTransferMessage] = useState('');
-  const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [shareAccess, setShareAccess] = useState<ShareAccess | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
   const [shareMessage, setShareMessage] = useState('');
@@ -137,6 +143,7 @@ export default function AdminDashboard() {
   const [registrationControl, setRegistrationControl] = useState<RegistrationControl | null>(null);
   const [registrationToggleLoading, setRegistrationToggleLoading] = useState(false);
   const [openActionMenu, setOpenActionMenu] = useState<ActionMenuState | null>(null);
+  const [openPanelMenu, setOpenPanelMenu] = useState<PanelMenuState | null>(null);
   const [qrModal, setQrModal] = useState<{ title: string; value: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -206,11 +213,17 @@ export default function AdminDashboard() {
       const target = event.target as HTMLElement | null;
       if (!target) return;
       if (target.closest('[data-actions-menu="true"]')) return;
+      if (target.closest('[data-dashboard-menu="true"]')) return;
       if (target.closest('[data-action-trigger="true"]')) return;
+      if (target.closest('[data-menu-trigger="true"]')) return;
       setOpenActionMenu(null);
+      setOpenPanelMenu(null);
     };
 
-    const onScroll = () => setOpenActionMenu(null);
+    const onScroll = () => {
+      setOpenActionMenu(null);
+      setOpenPanelMenu(null);
+    };
     window.addEventListener('pointerdown', onPointerDown);
     window.addEventListener('scroll', onScroll, true);
     window.addEventListener('resize', onScroll);
@@ -347,7 +360,6 @@ export default function AdminDashboard() {
       setTransferMessage(err instanceof Error ? err.message : 'Failed to export registrations');
     } finally {
       setTransferLoading(null);
-      setExportMenuOpen(false);
     }
   };
 
@@ -474,6 +486,25 @@ export default function AdminDashboard() {
       if (prev?.participantId === participantId) return null;
       return { participantId, top, left, openUp };
     });
+    setOpenPanelMenu(null);
+  };
+
+  const togglePanelMenu = (
+    event: React.MouseEvent<HTMLButtonElement>,
+    menu: PanelMenuState['menu'],
+    estimatedHeight = 220
+  ) => {
+    event.stopPropagation();
+    const rect = event.currentTarget.getBoundingClientRect();
+    const openUp = rect.bottom + estimatedHeight > window.innerHeight && rect.top > estimatedHeight;
+    const top = openUp ? rect.top - 8 : rect.bottom + 8;
+    const left = Math.min(rect.right, window.innerWidth - 12);
+
+    setOpenPanelMenu((prev) => {
+      if (prev?.menu === menu) return null;
+      return { menu, top, left, openUp };
+    });
+    setOpenActionMenu(null);
   };
 
   const toggleRegistrations = async () => {
@@ -542,57 +573,30 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-[#050510] grid-bg text-white pt-20 pb-16">
       <div className="max-w-7xl mx-auto px-4">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col gap-4 mb-8 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h1 className="text-3xl font-black">Admin Dashboard</h1>
             <p className="text-gray-400 text-sm mt-1">Ignite'26 - Registration and Check-in Management</p>
           </div>
-          <div className="flex gap-3">
-            <Link to="/admin/management-team" className="px-4 py-2 rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-sm flex items-center gap-2 hover:bg-indigo-500/30 transition-colors">
-              <ShieldCheck size={16} /> Team
-            </Link>
-            <Link to="/admin/upload" className="px-4 py-2 rounded-xl bg-purple-600/20 border border-purple-500/30 text-purple-300 text-sm flex items-center gap-2 hover:bg-purple-600/30 transition-colors">
-              <Upload size={16} /> Media
-            </Link>
-            <Link to="/admin/winners" className="px-4 py-2 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-300 text-sm flex items-center gap-2 hover:bg-amber-500/30 transition-colors">
-              <Trophy size={16} /> Winners
-            </Link>
-            <div className="relative">
-              <button
-                onClick={() => setExportMenuOpen(prev => !prev)}
-                disabled={transferLoading !== null}
-                className="px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-sm flex items-center gap-2 hover:bg-emerald-500/30 transition-colors disabled:opacity-50"
-              >
-                <Download size={16} />
-                {transferLoading === 'csv' || transferLoading === 'xlsx' ? 'Exporting...' : 'Export'}
-                <ChevronDown size={14} className={`transition-transform ${exportMenuOpen ? 'rotate-180' : ''}`} />
-              </button>
-              {exportMenuOpen && (
-                <div className="absolute right-0 mt-2 w-44 rounded-xl border border-[#1e1e3f] bg-[#0d0d1f]/95 backdrop-blur-sm shadow-xl z-20 overflow-hidden">
-                  <button
-                    onClick={() => handleExport('csv')}
-                    className="w-full px-4 py-2.5 text-left text-sm text-emerald-300 hover:bg-emerald-500/10 transition-colors"
-                  >
-                    Export as CSV
-                  </button>
-                  <button
-                    onClick={() => handleExport('xlsx')}
-                    className="w-full px-4 py-2.5 text-left text-sm text-cyan-300 hover:bg-cyan-500/10 transition-colors border-t border-white/5"
-                  >
-                    Export as Excel
-                  </button>
-                </div>
-              )}
-            </div>
+          <div className="flex flex-wrap gap-3">
             <button
-              onClick={handleImportClick}
-              disabled={transferLoading !== null}
-              className="px-4 py-2 rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-sm flex items-center gap-2 hover:bg-indigo-500/30 transition-colors disabled:opacity-50"
+              data-menu-trigger="true"
+              onClick={(event) => togglePanelMenu(event, 'shortcuts', 180)}
+              className="px-4 py-2 rounded-xl border border-fuchsia-500/30 bg-gradient-to-r from-fuchsia-500/15 to-violet-500/15 text-fuchsia-100 text-sm inline-flex items-center gap-2 hover:from-fuchsia-500/20 hover:to-violet-500/20 transition-colors"
             >
-              <FileUp size={16} /> {transferLoading === 'import' ? 'Importing...' : 'Import CSV/Excel'}
+              <Link2 size={16} />
+              Quick Links
+              <ChevronDown size={14} className={`transition-transform ${openPanelMenu?.menu === 'shortcuts' ? 'rotate-180' : ''}`} />
             </button>
-            <button onClick={fetchData} className="px-4 py-2 rounded-xl bg-[#0d0d1f]/90 border border-[#1e1e3f] text-gray-400 text-sm flex items-center gap-2 hover:bg-white/10 transition-colors">
-              <RefreshCw size={16} /> Refresh
+            <button
+              data-menu-trigger="true"
+              onClick={(event) => togglePanelMenu(event, 'data', 220)}
+              disabled={transferLoading !== null}
+              className="px-4 py-2 rounded-xl border border-emerald-500/30 bg-emerald-500/15 text-emerald-100 text-sm inline-flex items-center gap-2 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+            >
+              <Download size={16} />
+              {transferLoading ? 'Working...' : 'Data Tools'}
+              <ChevronDown size={14} className={`transition-transform ${openPanelMenu?.menu === 'data' ? 'rotate-180' : ''}`} />
             </button>
           </div>
         </div>
@@ -617,36 +621,14 @@ export default function AdminDashboard() {
             </div>
             <div className="flex flex-wrap gap-2">
               <button
-                onClick={() => handleShareAccessUpdate({ enabled: !shareAccess?.enabled }, shareAccess?.enabled ? 'Shared access disabled.' : 'Shared access enabled.')}
+                data-menu-trigger="true"
+                onClick={(event) => togglePanelMenu(event, 'share', 220)}
                 disabled={shareLoading}
-                className={`px-4 py-2 rounded-xl border text-sm font-medium transition-colors disabled:opacity-50 ${
-                  shareAccess?.enabled
-                    ? 'border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/20'
-                    : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
-                }`}
+                className="px-4 py-2 rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-200 text-sm font-medium inline-flex items-center gap-2 hover:bg-cyan-500/20 transition-colors disabled:opacity-50"
               >
-                {shareLoading ? 'Updating...' : shareAccess?.enabled ? 'Disable Access' : 'Enable Access'}
-              </button>
-              <button
-                onClick={() => handleShareAccessUpdate({ regenerate: true }, 'Share link regenerated. Old link is now revoked.')}
-                disabled={shareLoading}
-                className="px-4 py-2 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-300 text-sm font-medium hover:bg-amber-500/20 transition-colors disabled:opacity-50"
-              >
-                Regenerate Link
-              </button>
-              <button
-                onClick={handleCopyShareLink}
-                disabled={shareLoading || !shareAccess?.enabled}
-                className="px-4 py-2 rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-300 text-sm font-medium hover:bg-cyan-500/20 transition-colors disabled:opacity-50 flex items-center gap-2"
-              >
-                <Copy size={14} /> Copy Link
-              </button>
-              <button
-                onClick={openShareQr}
-                disabled={shareLoading || !shareAccess?.enabled}
-                className="px-4 py-2 rounded-xl border border-violet-500/30 bg-violet-500/10 text-violet-300 text-sm font-medium hover:bg-violet-500/20 transition-colors disabled:opacity-50 flex items-center gap-2"
-              >
-                <QrCode size={14} /> QR Link
+                <Link2 size={14} />
+                {shareLoading ? 'Updating...' : 'Access Options'}
+                <ChevronDown size={14} className={`transition-transform ${openPanelMenu?.menu === 'share' ? 'rotate-180' : ''}`} />
               </button>
             </div>
           </div>
@@ -664,29 +646,14 @@ export default function AdminDashboard() {
             </div>
             <div className="flex flex-wrap gap-2">
               <button
-                onClick={() => handleHandlerAccessUpdate({ enabled: !handlerAccess?.enabled }, handlerAccess?.enabled ? 'Validation handler access disabled.' : 'Validation handler access enabled.')}
+                data-menu-trigger="true"
+                onClick={(event) => togglePanelMenu(event, 'handler', 200)}
                 disabled={handlerLoading}
-                className={`px-4 py-2 rounded-xl border text-sm font-medium transition-colors disabled:opacity-50 ${
-                  handlerAccess?.enabled
-                    ? 'border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/20'
-                    : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
-                }`}
+                className="px-4 py-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-200 text-sm font-medium inline-flex items-center gap-2 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
               >
-                {handlerLoading ? 'Updating...' : handlerAccess?.enabled ? 'Disable Access' : 'Enable Access'}
-              </button>
-              <button
-                onClick={() => handleHandlerAccessUpdate({ regenerate: true }, 'Validation handler link regenerated. Old link revoked.')}
-                disabled={handlerLoading}
-                className="px-4 py-2 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-300 text-sm font-medium hover:bg-amber-500/20 transition-colors disabled:opacity-50"
-              >
-                Regenerate Link
-              </button>
-              <button
-                onClick={copyHandlerLink}
-                disabled={handlerLoading || !handlerAccess?.enabled}
-                className="px-4 py-2 rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-300 text-sm font-medium hover:bg-cyan-500/20 transition-colors disabled:opacity-50 flex items-center gap-2"
-              >
-                <Copy size={14} /> Copy Link
+                <ShieldCheck size={14} />
+                {handlerLoading ? 'Updating...' : 'Handler Options'}
+                <ChevronDown size={14} className={`transition-transform ${openPanelMenu?.menu === 'handler' ? 'rotate-180' : ''}`} />
               </button>
             </div>
           </div>
@@ -1070,6 +1037,182 @@ export default function AdminDashboard() {
           </div>
         );
       })()}
+
+      {openPanelMenu && (
+        <div
+          data-dashboard-menu="true"
+          className="fixed w-56 rounded-xl border border-[#2a2a4a] bg-[#121225] shadow-xl z-[9999] overflow-hidden"
+          style={{
+            top: openPanelMenu.top,
+            left: openPanelMenu.left,
+            transform: openPanelMenu.openUp ? 'translate(-100%, -100%)' : 'translateX(-100%)',
+          }}
+        >
+          {openPanelMenu.menu === 'shortcuts' && (
+            <>
+              <Link
+                to="/admin/management-team"
+                onClick={() => setOpenPanelMenu(null)}
+                className="w-full px-3 py-2.5 text-sm text-indigo-200 hover:bg-indigo-500/10 flex items-center gap-2"
+              >
+                <ShieldCheck size={14} /> Management Team
+              </Link>
+              <Link
+                to="/admin/upload"
+                onClick={() => setOpenPanelMenu(null)}
+                className="w-full px-3 py-2.5 text-sm text-purple-200 hover:bg-purple-500/10 flex items-center gap-2 border-t border-white/5"
+              >
+                <Upload size={14} /> Media Upload
+              </Link>
+              <Link
+                to="/admin/winners"
+                onClick={() => setOpenPanelMenu(null)}
+                className="w-full px-3 py-2.5 text-sm text-amber-200 hover:bg-amber-500/10 flex items-center gap-2 border-t border-white/5"
+              >
+                <Trophy size={14} /> Winners Manager
+              </Link>
+            </>
+          )}
+
+          {openPanelMenu.menu === 'data' && (
+            <>
+              <button
+                onClick={() => {
+                  setOpenPanelMenu(null);
+                  handleExport('csv');
+                }}
+                disabled={transferLoading !== null}
+                className="w-full px-3 py-2.5 text-left text-sm text-emerald-200 hover:bg-emerald-500/10 flex items-center gap-2 disabled:opacity-50"
+              >
+                <Download size={14} /> Export CSV
+              </button>
+              <button
+                onClick={() => {
+                  setOpenPanelMenu(null);
+                  handleExport('xlsx');
+                }}
+                disabled={transferLoading !== null}
+                className="w-full px-3 py-2.5 text-left text-sm text-cyan-200 hover:bg-cyan-500/10 flex items-center gap-2 border-t border-white/5 disabled:opacity-50"
+              >
+                <Download size={14} /> Export Excel
+              </button>
+              <button
+                onClick={() => {
+                  setOpenPanelMenu(null);
+                  handleImportClick();
+                }}
+                disabled={transferLoading !== null}
+                className="w-full px-3 py-2.5 text-left text-sm text-indigo-200 hover:bg-indigo-500/10 flex items-center gap-2 border-t border-white/5 disabled:opacity-50"
+              >
+                <FileUp size={14} /> Import CSV/Excel
+              </button>
+              <button
+                onClick={() => {
+                  setOpenPanelMenu(null);
+                  fetchData();
+                }}
+                className="w-full px-3 py-2.5 text-left text-sm text-gray-200 hover:bg-white/10 flex items-center gap-2 border-t border-white/5"
+              >
+                <RefreshCw size={14} /> Refresh Data
+              </button>
+            </>
+          )}
+
+          {openPanelMenu.menu === 'share' && (
+            <>
+              <button
+                onClick={() => {
+                  handleShareAccessUpdate(
+                    { enabled: !shareAccess?.enabled },
+                    shareAccess?.enabled ? 'Shared access disabled.' : 'Shared access enabled.'
+                  );
+                  setOpenPanelMenu(null);
+                }}
+                disabled={shareLoading}
+                className={`w-full px-3 py-2.5 text-left text-sm flex items-center gap-2 disabled:opacity-50 ${
+                  shareAccess?.enabled
+                    ? 'text-red-200 hover:bg-red-500/10'
+                    : 'text-emerald-200 hover:bg-emerald-500/10'
+                }`}
+              >
+                <Power size={14} /> {shareAccess?.enabled ? 'Disable Access' : 'Enable Access'}
+              </button>
+              <button
+                onClick={() => {
+                  handleShareAccessUpdate({ regenerate: true }, 'Share link regenerated. Old link is now revoked.');
+                  setOpenPanelMenu(null);
+                }}
+                disabled={shareLoading}
+                className="w-full px-3 py-2.5 text-left text-sm text-amber-200 hover:bg-amber-500/10 flex items-center gap-2 border-t border-white/5 disabled:opacity-50"
+              >
+                <RefreshCw size={14} /> Regenerate Link
+              </button>
+              <button
+                onClick={() => {
+                  handleCopyShareLink();
+                  setOpenPanelMenu(null);
+                }}
+                disabled={shareLoading || !shareAccess?.enabled}
+                className="w-full px-3 py-2.5 text-left text-sm text-cyan-200 hover:bg-cyan-500/10 flex items-center gap-2 border-t border-white/5 disabled:opacity-50"
+              >
+                <Copy size={14} /> Copy Link
+              </button>
+              <button
+                onClick={() => {
+                  openShareQr();
+                  setOpenPanelMenu(null);
+                }}
+                disabled={shareLoading || !shareAccess?.enabled}
+                className="w-full px-3 py-2.5 text-left text-sm text-violet-200 hover:bg-violet-500/10 flex items-center gap-2 border-t border-white/5 disabled:opacity-50"
+              >
+                <QrCode size={14} /> QR Link
+              </button>
+            </>
+          )}
+
+          {openPanelMenu.menu === 'handler' && (
+            <>
+              <button
+                onClick={() => {
+                  handleHandlerAccessUpdate(
+                    { enabled: !handlerAccess?.enabled },
+                    handlerAccess?.enabled ? 'Validation handler access disabled.' : 'Validation handler access enabled.'
+                  );
+                  setOpenPanelMenu(null);
+                }}
+                disabled={handlerLoading}
+                className={`w-full px-3 py-2.5 text-left text-sm flex items-center gap-2 disabled:opacity-50 ${
+                  handlerAccess?.enabled
+                    ? 'text-red-200 hover:bg-red-500/10'
+                    : 'text-emerald-200 hover:bg-emerald-500/10'
+                }`}
+              >
+                <Power size={14} /> {handlerAccess?.enabled ? 'Disable Access' : 'Enable Access'}
+              </button>
+              <button
+                onClick={() => {
+                  handleHandlerAccessUpdate({ regenerate: true }, 'Validation handler link regenerated. Old link revoked.');
+                  setOpenPanelMenu(null);
+                }}
+                disabled={handlerLoading}
+                className="w-full px-3 py-2.5 text-left text-sm text-amber-200 hover:bg-amber-500/10 flex items-center gap-2 border-t border-white/5 disabled:opacity-50"
+              >
+                <RefreshCw size={14} /> Regenerate Link
+              </button>
+              <button
+                onClick={() => {
+                  copyHandlerLink();
+                  setOpenPanelMenu(null);
+                }}
+                disabled={handlerLoading || !handlerAccess?.enabled}
+                className="w-full px-3 py-2.5 text-left text-sm text-cyan-200 hover:bg-cyan-500/10 flex items-center gap-2 border-t border-white/5 disabled:opacity-50"
+              >
+                <Copy size={14} /> Copy Link
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       {qrModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
