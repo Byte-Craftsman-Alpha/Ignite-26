@@ -4,6 +4,7 @@ import emailOtp from './email-otp.js';
 import managementTeam from './management-team.js';
 import media from './media.js';
 import participantLookup from './participant-lookup.js';
+import participantConfirmationEmail from './participant-confirmation-email.js';
 import participantsShare from './participants-share.js';
 import participantsTransfer from './participants-transfer.js';
 import participants from './participants.js';
@@ -29,6 +30,7 @@ const routeHandlers = new Map([
   ['/management-team', managementTeam],
   ['/media', media],
   ['/participant-lookup', participantLookup],
+  ['/participant-confirmation-email', participantConfirmationEmail],
   ['/participants', participants],
   ['/participants-share', participantsShare],
   ['/participants-transfer', participantsTransfer],

@@ -5,6 +5,7 @@ import {
   Users,
   UserCheck,
   Search,
+  Mail,
   XCircle,
   Upload,
   Trophy,
@@ -124,6 +125,7 @@ export default function AdminDashboard() {
   const [branch, setBranch] = useState('all');
   const [checkingIn, setCheckingIn] = useState<number | null>(null);
   const [verifyingPayment, setVerifyingPayment] = useState<number | null>(null);
+  const [sendingConfirmationId, setSendingConfirmationId] = useState<number | null>(null);
   const [branches, setBranches] = useState<string[]>([]);
 
   const [editingParticipant, setEditingParticipant] = useState<Participant | null>(null);
@@ -133,6 +135,7 @@ export default function AdminDashboard() {
   const [editError, setEditError] = useState('');
   const [transferLoading, setTransferLoading] = useState<'csv' | 'xlsx' | 'import' | null>(null);
   const [transferMessage, setTransferMessage] = useState('');
+  const [actionMessage, setActionMessage] = useState('');
   const [shareAccess, setShareAccess] = useState<ShareAccess | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
   const [shareMessage, setShareMessage] = useState('');
@@ -323,6 +326,25 @@ export default function AdminDashboard() {
       console.error(err);
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handleSendRegistrationDetails = async (participant: Participant) => {
+    setSendingConfirmationId(participant.id);
+    setActionMessage('');
+    try {
+      const res = await fetch('/api/participant-confirmation-email', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ id: participant.id }),
+      });
+      const data = await readJsonSafe<{ error?: string; message?: string }>(res);
+      if (!res.ok) throw new Error(getErrorMessage(data, 'Failed to send registration details'));
+      setActionMessage(data?.message || `Registration details sent to ${participant.email}`);
+    } catch (err) {
+      setActionMessage(err instanceof Error ? err.message : 'Failed to send registration details');
+    } finally {
+      setSendingConfirmationId(null);
     }
   };
 
@@ -609,6 +631,7 @@ export default function AdminDashboard() {
           onChange={handleImportFile}
         />
         {transferMessage && <p className="mb-5 text-sm text-gray-300">{transferMessage}</p>}
+        {actionMessage && <p className="mb-5 text-sm text-gray-300">{actionMessage}</p>}
 
         <div className="mb-8 p-5 rounded-2xl bg-[#0d0d1f]/90 border border-[#1e1e3f]">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -986,6 +1009,16 @@ export default function AdminDashboard() {
               transform: openActionMenu.openUp ? 'translate(-100%, -100%)' : 'translateX(-100%)',
             }}
           >
+            <button
+              onClick={() => {
+                handleSendRegistrationDetails(participant);
+                setOpenActionMenu(null);
+              }}
+              disabled={sendingConfirmationId === participant.id}
+              className="w-full px-3 py-2 text-left text-xs text-sky-200 hover:bg-sky-500/10 flex items-center gap-2 border-b border-white/5 disabled:opacity-50"
+            >
+              <Mail size={13} /> {sendingConfirmationId === participant.id ? 'Sending Details...' : 'Send Details'}
+            </button>
             <button
               onClick={() => {
                 handlePaymentVerification(participant.id, participant.payment_verified);
