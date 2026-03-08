@@ -6,6 +6,7 @@ import {
   UserCheck,
   Search,
   Mail,
+  AlertCircle,
   XCircle,
   Upload,
   Trophy,
@@ -86,6 +87,12 @@ interface PanelMenuState {
   openUp: boolean;
 }
 
+interface StatusDialogState {
+  title: string;
+  message: string;
+  tone: 'loading' | 'success' | 'error';
+}
+
 interface ParticipantForm {
   email: string;
   full_name: string;
@@ -135,7 +142,6 @@ export default function AdminDashboard() {
   const [editError, setEditError] = useState('');
   const [transferLoading, setTransferLoading] = useState<'csv' | 'xlsx' | 'import' | null>(null);
   const [transferMessage, setTransferMessage] = useState('');
-  const [actionMessage, setActionMessage] = useState('');
   const [shareAccess, setShareAccess] = useState<ShareAccess | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
   const [shareMessage, setShareMessage] = useState('');
@@ -148,6 +154,7 @@ export default function AdminDashboard() {
   const [openActionMenu, setOpenActionMenu] = useState<ActionMenuState | null>(null);
   const [openPanelMenu, setOpenPanelMenu] = useState<PanelMenuState | null>(null);
   const [qrModal, setQrModal] = useState<{ title: string; value: string } | null>(null);
+  const [statusDialog, setStatusDialog] = useState<StatusDialogState | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const fetchData = useCallback(async () => {
@@ -331,7 +338,11 @@ export default function AdminDashboard() {
 
   const handleSendRegistrationDetails = async (participant: Participant) => {
     setSendingConfirmationId(participant.id);
-    setActionMessage('');
+    setStatusDialog({
+      title: 'Sending Registration Details',
+      message: `Sending confirmation mail to ${participant.email}...`,
+      tone: 'loading',
+    });
     try {
       const res = await fetch('/api/participant-confirmation-email', {
         method: 'POST',
@@ -340,9 +351,17 @@ export default function AdminDashboard() {
       });
       const data = await readJsonSafe<{ error?: string; message?: string }>(res);
       if (!res.ok) throw new Error(getErrorMessage(data, 'Failed to send registration details'));
-      setActionMessage(data?.message || `Registration details sent to ${participant.email}`);
+      setStatusDialog({
+        title: 'Registration Details Sent',
+        message: data?.message || `Registration details sent to ${participant.email}`,
+        tone: 'success',
+      });
     } catch (err) {
-      setActionMessage(err instanceof Error ? err.message : 'Failed to send registration details');
+      setStatusDialog({
+        title: 'Email Send Failed',
+        message: err instanceof Error ? err.message : 'Failed to send registration details',
+        tone: 'error',
+      });
     } finally {
       setSendingConfirmationId(null);
     }
@@ -631,7 +650,6 @@ export default function AdminDashboard() {
           onChange={handleImportFile}
         />
         {transferMessage && <p className="mb-5 text-sm text-gray-300">{transferMessage}</p>}
-        {actionMessage && <p className="mb-5 text-sm text-gray-300">{actionMessage}</p>}
 
         <div className="mb-8 p-5 rounded-2xl bg-[#0d0d1f]/90 border border-[#1e1e3f]">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -1263,6 +1281,64 @@ export default function AdminDashboard() {
                 className="w-64 h-64 mx-auto rounded-lg bg-white p-2"
               />
               <p className="mt-3 text-xs text-gray-400 break-all">{qrModal.value}</p>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {statusDialog && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[10000] flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-md bg-[#171127] border border-white/10 rounded-2xl overflow-hidden"
+          >
+            <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-white">{statusDialog.title}</h3>
+                <p className="text-xs text-gray-400 mt-1">Admin email delivery status</p>
+              </div>
+              {statusDialog.tone !== 'loading' && (
+                <button
+                  onClick={() => setStatusDialog(null)}
+                  className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-300"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+            <div className="p-5">
+              <div className="flex items-start gap-3">
+                <div
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    statusDialog.tone === 'loading'
+                      ? 'bg-sky-500/15 text-sky-300'
+                      : statusDialog.tone === 'success'
+                        ? 'bg-emerald-500/15 text-emerald-300'
+                        : 'bg-red-500/15 text-red-300'
+                  }`}
+                >
+                  {statusDialog.tone === 'loading' ? (
+                    <RefreshCw size={18} className="animate-spin" />
+                  ) : statusDialog.tone === 'success' ? (
+                    <Mail size={18} />
+                  ) : (
+                    <AlertCircle size={18} />
+                  )}
+                </div>
+                <p className="text-sm text-gray-200 leading-relaxed">{statusDialog.message}</p>
+              </div>
+
+              {statusDialog.tone !== 'loading' && (
+                <div className="mt-5 flex justify-end">
+                  <button
+                    onClick={() => setStatusDialog(null)}
+                    className="px-4 py-2 rounded-xl bg-white/10 border border-white/15 text-white text-sm hover:bg-white/15"
+                  >
+                    Close
+                  </button>
+                </div>
+              )}
             </div>
           </motion.div>
         </div>
