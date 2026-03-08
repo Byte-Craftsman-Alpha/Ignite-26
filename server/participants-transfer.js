@@ -239,26 +239,15 @@ export default async function handler(req, res) {
           continue;
         }
 
-        let existing = await db.prepare('SELECT * FROM participants WHERE roll_number = ? LIMIT 1').get(row.roll_number);
-        if (!existing) {
-          existing = await db.prepare('SELECT * FROM participants WHERE email = ? LIMIT 1').get(row.email);
-        }
+        let existing = await db.prepare('SELECT * FROM participants WHERE email = ? LIMIT 1').get(row.email);
         const existingId = existing?.id || null;
 
-        if (await duplicate('roll_number', row.roll_number, existingId)) {
-          failed.push({ row: rowNum, error: 'Duplicate roll number conflict' });
-          continue;
-        }
         if (await duplicate('email', row.email, existingId)) {
           failed.push({ row: rowNum, error: 'Duplicate email conflict' });
           continue;
         }
         if (await duplicate('payment_id', row.payment_id, existingId)) {
           failed.push({ row: rowNum, error: 'Duplicate payment ID conflict' });
-          continue;
-        }
-        if (await duplicate('whatsapp_number', row.whatsapp_number, existingId)) {
-          failed.push({ row: rowNum, error: 'Duplicate WhatsApp number conflict' });
           continue;
         }
 

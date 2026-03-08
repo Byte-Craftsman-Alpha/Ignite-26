@@ -136,19 +136,17 @@ async function duplicate(field, value, currentId = null) {
 }
 
 async function detectExistingId(row) {
-  const matches = new Set();
   const byEmail = await db.prepare('SELECT id FROM participants WHERE email = ? LIMIT 1').get(row.email);
-  const byRoll = await db.prepare('SELECT id FROM participants WHERE roll_number = ? LIMIT 1').get(row.roll_number);
+  if (byEmail?.id) return { conflict: false, existingId: Number(byEmail.id) };
+
   const byPayment = await db.prepare('SELECT id FROM participants WHERE payment_id = ? LIMIT 1').get(row.payment_id);
-  const byWhatsapp = await db.prepare('SELECT id FROM participants WHERE whatsapp_number = ? LIMIT 1').get(row.whatsapp_number);
+  if (byPayment?.id) return { conflict: false, existingId: Number(byPayment.id) };
 
-  if (byEmail?.id) matches.add(byEmail.id);
-  if (byRoll?.id) matches.add(byRoll.id);
-  if (byPayment?.id) matches.add(byPayment.id);
-  if (byWhatsapp?.id) matches.add(byWhatsapp.id);
+  const byRollSameEmail = await db
+    .prepare('SELECT id FROM participants WHERE roll_number = ? AND email = ? LIMIT 1')
+    .get(row.roll_number, row.email);
+  if (byRollSameEmail?.id) return { conflict: false, existingId: Number(byRollSameEmail.id) };
 
-  if (matches.size > 1) return { conflict: true, existingId: null };
-  if (matches.size === 1) return { conflict: false, existingId: Number([...matches][0]) };
   return { conflict: false, existingId: null };
 }
 
@@ -227,10 +225,6 @@ async function syncRows(rawRows) {
     }
     const existingId = existing.existingId;
 
-    if (await duplicate('roll_number', row.roll_number, existingId)) {
-      failed.push({ row: rowNumber, error: 'Duplicate roll number conflict' });
-      continue;
-    }
     if (await duplicate('email', row.email, existingId)) {
       failed.push({ row: rowNumber, error: 'Duplicate email conflict' });
       continue;
@@ -239,8 +233,12 @@ async function syncRows(rawRows) {
       failed.push({ row: rowNumber, error: 'Duplicate payment ID conflict' });
       continue;
     }
-    if (await duplicate('whatsapp_number', row.whatsapp_number, existingId)) {
-      failed.push({ row: rowNumber, error: 'Duplicate WhatsApp number conflict' });
+
+    const rollOwnedByDifferentEmail = await db
+      .prepare('SELECT id FROM participants WHERE roll_number = ? AND email != ? LIMIT 1')
+      .get(row.roll_number, row.email);
+    if (rollOwnedByDifferentEmail?.id && existingId && Number(rollOwnedByDifferentEmail.id) === Number(existingId)) {
+      failed.push({ row: rowNumber, error: 'Roll number belongs to a different email' });
       continue;
     }
 

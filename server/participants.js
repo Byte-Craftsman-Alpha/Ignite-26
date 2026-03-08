@@ -25,6 +25,13 @@ async function checkDuplicate(field, value, currentId = null) {
   return db.prepare(`SELECT id FROM participants WHERE ${field} = ?`).get(value);
 }
 
+async function findExistingByRollAndEmail(roll_number, email) {
+  if (!roll_number || !email) return null;
+  return db
+    .prepare('SELECT id FROM participants WHERE roll_number = ? AND email = ? LIMIT 1')
+    .get(String(roll_number), String(email).trim().toLowerCase());
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -65,6 +72,8 @@ export default async function handler(req, res) {
 
       const { email, full_name, roll_number, branch, year, skills, payment_id, whatsapp_number, otp_token } = req.body;
 
+      const normalizedEmail = String(email).trim().toLowerCase();
+
       if (!otp_token) {
         return res.status(403).json({ error: 'Email OTP verification is required before registration' });
       }
@@ -79,49 +88,71 @@ export default async function handler(req, res) {
             LIMIT 1
           `
         )
-        .get(String(email).trim().toLowerCase(), otp_token, new Date().toISOString());
+        .get(normalizedEmail, otp_token, new Date().toISOString());
 
       if (!verifiedOtp) {
         return res.status(403).json({ error: 'Invalid or expired OTP verification. Please verify your email again.' });
       }
 
-      if (await checkDuplicate('roll_number', roll_number)) {
-        return res.status(409).json({ error: 'This roll number is already registered' });
-      }
-      if (await checkDuplicate('email', email)) {
+      const existingSameRollAndEmail = await findExistingByRollAndEmail(roll_number, normalizedEmail);
+
+      if (!existingSameRollAndEmail && (await checkDuplicate('email', normalizedEmail))) {
         return res.status(409).json({ error: 'This email address is already registered' });
       }
       if (await checkDuplicate('payment_id', payment_id)) {
         return res.status(409).json({ error: 'This registration payment ID is already used' });
       }
-      if (await checkDuplicate('whatsapp_number', whatsapp_number)) {
-        return res.status(409).json({ error: 'This WhatsApp number is already registered' });
+
+      let participant;
+      if (existingSameRollAndEmail?.id) {
+        await db
+          .prepare(
+            `
+              UPDATE participants
+              SET full_name = ?, branch = ?, year = ?, skills = ?, payment_id = ?, whatsapp_number = ?
+              WHERE id = ?
+            `
+          )
+          .run(full_name, branch, year, encodeSkills(skills), payment_id, whatsapp_number, existingSameRollAndEmail.id);
+
+        participant = toParticipant(await db.prepare('SELECT * FROM participants WHERE id = ?').get(existingSameRollAndEmail.id));
+
+        await writeActivity({
+          entity_type: 'participant',
+          entity_id: participant.id,
+          action: 'registration_updated',
+          actor_email: participant.email,
+          details: {
+            roll_number: participant.roll_number,
+            branch: participant.branch,
+            year: participant.year,
+          },
+        });
+      } else {
+        const result = await db
+          .prepare(
+            `
+              INSERT INTO participants (email, full_name, roll_number, branch, year, skills, payment_id, whatsapp_number)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `
+          )
+          .run(normalizedEmail, full_name, roll_number, branch, year, encodeSkills(skills), payment_id, whatsapp_number);
+
+        participant = toParticipant(await db.prepare('SELECT * FROM participants WHERE id = ?').get(result.lastInsertRowid));
+
+        await writeActivity({
+          entity_type: 'participant',
+          entity_id: participant.id,
+          action: 'registration_created',
+          actor_email: participant.email,
+          details: {
+            full_name: participant.full_name,
+            roll_number: participant.roll_number,
+            branch: participant.branch,
+            year: participant.year,
+          },
+        });
       }
-
-      const result = await db
-        .prepare(
-          `
-            INSERT INTO participants (email, full_name, roll_number, branch, year, skills, payment_id, whatsapp_number)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-          `
-        )
-        .run(email, full_name, roll_number, branch, year, encodeSkills(skills), payment_id, whatsapp_number);
-
-      const row = await db.prepare('SELECT * FROM participants WHERE id = ?').get(result.lastInsertRowid);
-      const participant = toParticipant(row);
-
-      await writeActivity({
-        entity_type: 'participant',
-        entity_id: participant.id,
-        action: 'registration_created',
-        actor_email: participant.email,
-        details: {
-          full_name: participant.full_name,
-          roll_number: participant.roll_number,
-          branch: participant.branch,
-          year: participant.year,
-        },
-      });
 
       await db.prepare('UPDATE email_otp_sessions SET consumed = 1 WHERE id = ?').run(verifiedOtp.id);
 
@@ -131,7 +162,7 @@ export default async function handler(req, res) {
         console.error('Confirmation mail error:', mailErr);
       }
 
-      return res.status(201).json(participant);
+      return res.status(existingSameRollAndEmail?.id ? 200 : 201).json(participant);
     }
 
     if (req.method === 'PUT') {
@@ -147,17 +178,11 @@ export default async function handler(req, res) {
       const validationError = validateParticipantInput({ email, full_name, roll_number, branch, year, skills, payment_id, whatsapp_number });
       if (validationError) return res.status(400).json({ error: validationError });
 
-      if (await checkDuplicate('roll_number', roll_number, id)) {
-        return res.status(409).json({ error: 'This roll number is already registered' });
-      }
-      if (await checkDuplicate('email', email, id)) {
+      if (await checkDuplicate('email', String(email).trim().toLowerCase(), id)) {
         return res.status(409).json({ error: 'This email address is already registered' });
       }
       if (await checkDuplicate('payment_id', payment_id, id)) {
         return res.status(409).json({ error: 'This registration payment ID is already used' });
-      }
-      if (await checkDuplicate('whatsapp_number', whatsapp_number, id)) {
-        return res.status(409).json({ error: 'This WhatsApp number is already registered' });
       }
 
       await db
@@ -168,7 +193,7 @@ export default async function handler(req, res) {
             WHERE id = ?
           `
         )
-        .run(email, full_name, roll_number, branch, year, encodeSkills(skills), payment_id, whatsapp_number, id);
+        .run(String(email).trim().toLowerCase(), full_name, roll_number, branch, year, encodeSkills(skills), payment_id, whatsapp_number, id);
 
       const updated = toParticipant(await db.prepare('SELECT * FROM participants WHERE id = ?').get(id));
       const previous = toParticipant(existing);

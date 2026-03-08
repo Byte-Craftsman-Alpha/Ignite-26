@@ -73,12 +73,12 @@ const schemaStatements = [
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       email TEXT NOT NULL UNIQUE,
       full_name TEXT NOT NULL,
-      roll_number TEXT NOT NULL UNIQUE,
+      roll_number TEXT NOT NULL,
       branch TEXT NOT NULL,
       year TEXT NOT NULL,
       skills TEXT NOT NULL DEFAULT '[]',
       payment_id TEXT NOT NULL UNIQUE,
-      whatsapp_number TEXT NOT NULL UNIQUE,
+      whatsapp_number TEXT NOT NULL,
       payment_verified INTEGER NOT NULL DEFAULT 0,
       check_in_status INTEGER NOT NULL DEFAULT 0,
       check_in_time TEXT,
@@ -205,10 +205,74 @@ async function ensureColumn(tableName, columnName, definition) {
   }
 }
 
+async function getUniqueIndexesForTable(tableName) {
+  const indexes = await executeStatement(`PRAGMA index_list(${tableName})`);
+  const uniqueIndexes = [];
+  for (const idx of indexes.rows) {
+    if (!idx?.name || !idx?.unique) continue;
+    const info = await executeStatement(`PRAGMA index_info(${idx.name})`);
+    uniqueIndexes.push({
+      name: idx.name,
+      columns: info.rows.map((row) => row.name).filter(Boolean),
+    });
+  }
+  return uniqueIndexes;
+}
+
+async function migrateParticipantsUniqueness() {
+  const uniqueIndexes = await getUniqueIndexesForTable('participants');
+  const hasLegacyRollUnique = uniqueIndexes.some((idx) => idx.columns.length === 1 && idx.columns[0] === 'roll_number');
+  const hasLegacyWhatsappUnique = uniqueIndexes.some((idx) => idx.columns.length === 1 && idx.columns[0] === 'whatsapp_number');
+  if (!hasLegacyRollUnique && !hasLegacyWhatsappUnique) return;
+
+  await executeStatement('BEGIN');
+  try {
+    await executeStatement(`
+      CREATE TABLE IF NOT EXISTS participants__migrated (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT NOT NULL UNIQUE,
+        full_name TEXT NOT NULL,
+        roll_number TEXT NOT NULL,
+        branch TEXT NOT NULL,
+        year TEXT NOT NULL,
+        skills TEXT NOT NULL DEFAULT '[]',
+        payment_id TEXT NOT NULL UNIQUE,
+        whatsapp_number TEXT NOT NULL,
+        payment_verified INTEGER NOT NULL DEFAULT 0,
+        check_in_status INTEGER NOT NULL DEFAULT 0,
+        check_in_time TEXT,
+        registered_at TEXT NOT NULL DEFAULT (datetime('now')),
+        CHECK (length(roll_number) = 13),
+        CHECK (length(whatsapp_number) = 10)
+      )
+    `);
+
+    await executeStatement(`
+      INSERT INTO participants__migrated (
+        id, email, full_name, roll_number, branch, year, skills, payment_id, whatsapp_number,
+        payment_verified, check_in_status, check_in_time, registered_at
+      )
+      SELECT
+        id, email, full_name, roll_number, branch, year, skills, payment_id, whatsapp_number,
+        payment_verified, check_in_status, check_in_time, registered_at
+      FROM participants
+    `);
+
+    await executeStatement('DROP TABLE participants');
+    await executeStatement('ALTER TABLE participants__migrated RENAME TO participants');
+    await executeStatement('COMMIT');
+  } catch (error) {
+    await executeStatement('ROLLBACK');
+    throw error;
+  }
+}
+
 async function initSchema() {
   for (const sql of schemaStatements) {
     await executeStatement(sql);
   }
+
+  await migrateParticipantsUniqueness();
 
   await ensureColumn('participants', 'payment_verified', "INTEGER NOT NULL DEFAULT 0");
   await ensureColumn('media', 'thumb_url', "TEXT NOT NULL DEFAULT ''");
