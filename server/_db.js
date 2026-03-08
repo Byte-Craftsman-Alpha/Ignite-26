@@ -16,11 +16,14 @@ function hashPassword(password) {
 }
 
 function resolveLocalDatabaseUrl() {
-  const defaultLocalPath = process.env.VERCEL
+  const isVercel = Boolean(process.env.VERCEL);
+  const defaultLocalPath = isVercel
     ? path.join('/tmp', 'ignite26.db')
     : path.join(process.cwd(), 'data', 'ignite26.db');
   const configuredPath = String(process.env.SQLITE_DB_PATH || defaultLocalPath).trim();
-  const absolutePath = path.isAbsolute(configuredPath) ? configuredPath : path.join(process.cwd(), configuredPath);
+  const absolutePath = isVercel
+    ? (path.isAbsolute(configuredPath) ? configuredPath : path.join('/tmp', path.basename(configuredPath || 'ignite26.db')))
+    : (path.isAbsolute(configuredPath) ? configuredPath : path.join(process.cwd(), configuredPath));
   fs.mkdirSync(path.dirname(absolutePath), { recursive: true });
   return pathToFileURL(absolutePath).href;
 }
