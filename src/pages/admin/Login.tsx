@@ -1,8 +1,8 @@
-﻿import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Shield, Eye, EyeOff, AlertCircle } from 'lucide-react';
-import { setToken } from '../../lib/auth';
+import { checkAdminAuth, setToken, subscribeToAdminAuth } from '../../lib/auth';
 import { getErrorMessage, readJsonSafe } from '../../lib/http';
 
 export default function AdminLogin() {
@@ -13,23 +13,35 @@ export default function AdminLogin() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const verify = async () => {
+      const user = await checkAdminAuth();
+      if (user) navigate('/admin', { replace: true });
+    };
+    verify();
+    return subscribeToAdminAuth(() => {
+      verify();
+    });
+  }, [navigate]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     try {
+      const normalizedEmail = email.trim().toLowerCase();
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: normalizedEmail, password }),
       });
       const data = await readJsonSafe<{ token?: string; error?: string }>(res);
       if (!res.ok) throw new Error(getErrorMessage(data, 'Login failed'));
       if (!data?.token) throw new Error('Missing login token in response');
       setToken(data.token);
-      navigate('/admin');
-    } catch (err: any) {
-      setError(err.message);
+      navigate('/admin', { replace: true });
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
       setLoading(false);
     }
@@ -62,24 +74,38 @@ export default function AdminLogin() {
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1.5">Email</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
                 placeholder="Configured ADMIN_EMAIL"
-                className="w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#ff2d78]" />
+                className="w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#ff2d78]"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1.5">Password</label>
               <div className="relative">
-                <input type={showPw ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
+                <input
+                  type={showPw ? 'text' : 'password'}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
                   placeholder="********"
-                  className="w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl px-4 py-3 pr-12 text-white placeholder-gray-600 focus:outline-none focus:border-[#ff2d78]" />
-                <button type="button" onClick={() => setShowPw(!showPw)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
+                  className="w-full bg-[#0d0d1f]/90 border border-[#1e1e3f] rounded-xl px-4 py-3 pr-12 text-white placeholder-gray-600 focus:outline-none focus:border-[#ff2d78]"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPw(!showPw)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+                >
                   {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
             </div>
-            <button type="submit" disabled={loading}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-[#ff2d78] to-[#7c3aed] text-white font-bold hover:opacity-90 transition-opacity disabled:opacity-50 mt-2">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-[#ff2d78] to-[#7c3aed] text-white font-bold hover:opacity-90 transition-opacity disabled:opacity-50 mt-2"
+            >
               {loading ? 'Signing In...' : 'Sign In to Dashboard'}
             </button>
           </form>
@@ -92,4 +118,3 @@ export default function AdminLogin() {
     </div>
   );
 }
-

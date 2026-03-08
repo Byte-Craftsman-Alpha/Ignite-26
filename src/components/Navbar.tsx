@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, LogOut, Shield } from 'lucide-react';
-import { getToken, removeToken } from '../lib/auth';
+import { getToken, removeToken, subscribeToAdminAuth } from '../lib/auth';
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
@@ -11,21 +11,30 @@ export default function Navbar() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    setIsAdmin(!!getToken());
+    const syncAdminState = () => setIsAdmin(!!getToken());
+    syncAdminState();
     const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', onScroll);
-    return () => window.removeEventListener('scroll', onScroll);
+    const unsubscribe = subscribeToAdminAuth(syncAdminState);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      unsubscribe();
+    };
   }, [location]);
 
   const handleSignout = async () => {
     const token = getToken();
-    await fetch('/api/auth/signout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    });
-    removeToken();
-    setIsAdmin(false);
-    navigate('/');
+    try {
+      await fetch('/api/auth/signout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      });
+    } finally {
+      removeToken();
+      setIsAdmin(false);
+      setOpen(false);
+      navigate('/', { replace: true });
+    }
   };
 
   const links = [
