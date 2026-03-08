@@ -225,8 +225,10 @@ async function migrateParticipantsUniqueness() {
   const hasLegacyWhatsappUnique = uniqueIndexes.some((idx) => idx.columns.length === 1 && idx.columns[0] === 'whatsapp_number');
   if (!hasLegacyRollUnique && !hasLegacyWhatsappUnique) return;
 
-  await executeStatement('BEGIN');
+  let savepointStarted = false;
   try {
+    await executeStatement('SAVEPOINT participants_uniqueness_migration');
+    savepointStarted = true;
     await executeStatement(`
       CREATE TABLE IF NOT EXISTS participants__migrated (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -260,9 +262,16 @@ async function migrateParticipantsUniqueness() {
 
     await executeStatement('DROP TABLE participants');
     await executeStatement('ALTER TABLE participants__migrated RENAME TO participants');
-    await executeStatement('COMMIT');
+    await executeStatement('RELEASE SAVEPOINT participants_uniqueness_migration');
   } catch (error) {
-    await executeStatement('ROLLBACK');
+    if (savepointStarted) {
+      try {
+        await executeStatement('ROLLBACK TO SAVEPOINT participants_uniqueness_migration');
+        await executeStatement('RELEASE SAVEPOINT participants_uniqueness_migration');
+      } catch {
+        // ignore rollback errors
+      }
+    }
     throw error;
   }
 }
