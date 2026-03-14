@@ -35,7 +35,7 @@ const SKILLS = ['Singing', 'Games/Fun Activities', 'Dance', 'Comedy/Standup', 'O
 
 const YEAR_FEES: Record<string, number> = {
   '1st Year': 500,
-  '2nd Year': 800,
+  '2nd Year': 700,
 };
 const UPI_ID = 'harshitkan2908@oksbi';
 const UPI_PAYEE_NAME = "Ignite'26 Event";
