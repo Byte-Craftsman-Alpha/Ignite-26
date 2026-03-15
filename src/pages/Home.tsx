@@ -27,7 +27,7 @@ const EVENT_PILLARS = [
 ];
 
 const QUICK_DETAILS = [
-  { icon: Calendar, label: 'Date', value: 'March 15, 2026', tone: 'purple' },
+  { icon: Calendar, label: 'Date', value: '25 March 2026', tone: 'purple' },
   { icon: Clock, label: 'Time', value: '11:00 AM Onwards', tone: 'amber' },
   { icon: MapPin, label: 'Venue', value: 'Top secret', tone: 'pink' },
 ];

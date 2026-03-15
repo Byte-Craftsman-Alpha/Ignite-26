@@ -65,9 +65,10 @@ export default function ThreeBackground() {
     scene.add(stars);
 
     let scrollProgress = 0;
+    let scrollTarget = 0;
     const onScroll = () => {
       const maxScrollable = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
-      scrollProgress = window.scrollY / maxScrollable;
+      scrollTarget = window.scrollY / maxScrollable;
     };
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -93,6 +94,7 @@ export default function ThreeBackground() {
       if (!isActive) return;
 
       const elapsed = clock.getElapsedTime();
+      scrollProgress += (scrollTarget - scrollProgress) * 0.08;
       const targetY = (scrollProgress - 0.5) * 4.5;
 
       group.rotation.y += 0.0019;
