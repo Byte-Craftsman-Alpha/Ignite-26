@@ -210,7 +210,7 @@ export default async function handler(req, res) {
       let thumbUrl = '';
 
       if (file_data_url) {
-        const stored = storeMediaUpload({
+        const stored = await storeMediaUpload({
           category,
           originalDataUrl: file_data_url,
           previewDataUrl: preview_data_url || file_data_url,
@@ -310,3 +310,4 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: err.message });
   }
 }
+

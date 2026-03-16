@@ -1,13 +1,14 @@
 # Ignite 26
 
 Frontend: React + TypeScript + Vite  
-Backend/API routes: one Vercel function in `api/index.js`, with handlers stored in `server/` (SQLite-backed)
+Backend/API: Single Vercel entrypoint in `api/index.js` dispatching handlers in `server/` (SQLite-backed).
 
 ## Vercel Hobby Plan
 
-- Keep only the single Vercel entrypoint in `api/index.js`
-- Add new backend handlers under `server/`, then register them in `server/router.js`
-- Do not add extra executable files under `api/`, or Vercel will count them as more Serverless Functions
+- Keep only the single Vercel entrypoint in `api/index.js`.
+- Add new backend handlers under `server/`, then register them in `server/router.js`.
+- Do not add extra executable files under `api/`, or Vercel will count them as more Serverless Functions.
+
 ## Prerequisites
 
 - Node.js 20+ (LTS recommended)
@@ -40,8 +41,8 @@ npm run build
 
 ## Testing / Verification
 
-This repo currently has no dedicated unit/integration test runner (`test` script is not defined in `package.json`).
-Use the following quality checks:
+No dedicated unit/integration test runner is configured (`test` script is not defined).
+Suggested checks:
 
 ```bash
 npm run lint
@@ -50,34 +51,62 @@ npm run build
 
 ## Environment Variables (API)
 
-The serverless API layer now uses local SQLite:
+Required for local dev:
 
 - `SQLITE_DB_PATH` (example: `./data/ignite26.db`)
-- `GOOGLE_SHEET_SYNC_URL` (optional Google Sheet URL for sync pull)
-- `SHEET_SYNC_SECRET` (optional secret for Apps Script webhook push)
-- `VALIDATION_HANDLER_PASSWORD` (default password for hidden `/validate/:token` handler page)
+- `ADMIN_EMAIL` (seeded on first run)
+- `ADMIN_PASSWORD` (seeded on first run)
 
-On first run, tables are auto-created and a default admin is seeded:
+Optional:
 
-- email: `admin@ignite26.edu.in`
-- password: `admin123`
+- `TURSO_DATABASE_URL` (remote libSQL/Turso)
+- `TURSO_AUTH_TOKEN` (if using Turso)
+- `API_BODY_LIMIT` (default 25mb)
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` (OTP + confirmation emails)
+- `GOOGLE_SHEET_SYNC_URL` (sync pull from Google Sheet)
+- `SHEET_SYNC_SECRET` (Apps Script webhook push secret)
+- `VALIDATION_HANDLER_PASSWORD` (default password for `/validate/:token` handler page)
 
-## Current Status (checked on March 4, 2026)
+Media uploads on Vercel:
 
-Commands executed:
+- `BLOB_READ_WRITE_TOKEN` is required to store uploaded media using Vercel Blob.
+- Without this token on Vercel, uploads will fail because the filesystem is read-only.
 
-- `npm run build` -> passes
-- `npm run lint` -> still has existing lint issues in some frontend files
+## Event Settings
+
+Admin page:
+
+- `/admin/event-settings`
+
+API:
+
+- `GET /api/event-settings` (public)
+- `PUT /api/event-settings` (admin only)
+
+Settings include:
+
+- Title, venue, display date/time
+- Countdown datetime
+- Dress codes
+- Day flow timeline
+- Support note
+
+## Media Upload Behavior
+
+- Public uploads are stored with status `pending` and require admin approval.
+- Admin uploads are stored with status `approved`.
+- On local dev, uploads are written to `public/uploads`.
+- On Vercel, uploads use Vercel Blob (requires `BLOB_READ_WRITE_TOKEN`).
 
 ## Google Sheet Sync
 
 API route: `POST /api/sheet-sync`
 
 - Admin-triggered pull sync:
-  - Uses `GOOGLE_SHEET_SYNC_URL` from `.env`, or pass `{ "sheet_url": "..." }`
+  - Uses `GOOGLE_SHEET_SYNC_URL` from `.env`, or pass `{ "sheet_url": "..." }`.
 - Webhook push sync (for Apps Script):
-  - Send JSON with `{ "rows": [...] }` or `{ "row": {...} }`
-  - Include `X-Sheet-Sync-Secret: <SHEET_SYNC_SECRET>`
+  - Send JSON with `{ "rows": [...] }` or `{ "row": {...} }`.
+  - Include `X-Sheet-Sync-Secret: <SHEET_SYNC_SECRET>`.
 
 Example Apps Script webhook call:
 
@@ -96,7 +125,8 @@ function pushLatestRows(rows) {
   });
 }
 ```
-## Sync google form response to database
+
+## Sync Google Form Responses to Database
 
 ```javascript
 const API_URL = 'API_ENDPOINT'; // or your local tunnel URL
@@ -118,7 +148,7 @@ function syncAllRowsNow() {
 
   const headers = values[0].map(h => String(h || '').trim());
   const allRows = values.slice(1).map(r => rowArrayToObject(headers, r));
-  
+
   // CHUNK CONFIGURATION
   const chunkSize = 1; // Try 50 rows at a time
   for (let i = 0; i < allRows.length; i += chunkSize) {
@@ -159,3 +189,9 @@ function rowArrayToObject(headers, row) {
   return out;
 }
 ```
+
+## Status
+
+- Last known checks were on March 4, 2026.
+- Build passed, lint had existing issues at that time.
+- This README has not been re-verified since then.

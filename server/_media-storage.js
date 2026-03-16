@@ -1,6 +1,7 @@
-﻿import fs from 'fs';
+import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import { put } from '@vercel/blob';
 
 function sanitizeCategory(category) {
   const value = String(category || 'general').toLowerCase();
@@ -34,12 +35,49 @@ function extFromMime(mime) {
   return `.${fallback.replace(/[^a-z0-9]/gi, '')}`;
 }
 
-export function storeMediaUpload({ category, originalDataUrl, previewDataUrl }) {
+export async function storeMediaUpload({ category, originalDataUrl, previewDataUrl }) {
   const parsedOriginal = parseDataUrl(originalDataUrl);
   if (!parsedOriginal) throw new Error('Invalid uploaded media');
 
   const parsedPreview = previewDataUrl ? parseDataUrl(previewDataUrl) : null;
   const safeCategory = sanitizeCategory(category);
+
+  const fileBase = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+  const originalExt = extFromMime(parsedOriginal.mime);
+  const originalFileName = `${fileBase}${originalExt}`;
+
+  let thumbFileName = originalFileName;
+  const useBlob = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+  const isVercel = Boolean(process.env.VERCEL);
+
+  if (useBlob) {
+    const baseKey = `uploads/${safeCategory}`;
+    const originalKey = `${baseKey}/original/${originalFileName}`;
+    const originalResult = await put(originalKey, parsedOriginal.buffer, {
+      access: 'public',
+      contentType: parsedOriginal.mime,
+    });
+
+    let thumbUrl = originalResult.url;
+    if (parsedPreview) {
+      thumbFileName = `${fileBase}${extFromMime(parsedPreview.mime)}`;
+      const thumbKey = `${baseKey}/thumbs/${thumbFileName}`;
+      const thumbResult = await put(thumbKey, parsedPreview.buffer, {
+        access: 'public',
+        contentType: parsedPreview.mime,
+      });
+      thumbUrl = thumbResult.url;
+    }
+
+    return {
+      url: originalResult.url,
+      thumb_url: thumbUrl,
+    };
+  }
+
+  if (isVercel) {
+    throw new Error('Upload storage not configured. Set BLOB_READ_WRITE_TOKEN for Vercel Blob storage.');
+  }
 
   const basePublicDir = path.join(process.cwd(), 'public', 'uploads', safeCategory);
   const originalDir = path.join(basePublicDir, 'original');
@@ -48,13 +86,9 @@ export function storeMediaUpload({ category, originalDataUrl, previewDataUrl }) 
   fs.mkdirSync(originalDir, { recursive: true });
   fs.mkdirSync(thumbsDir, { recursive: true });
 
-  const fileBase = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
-  const originalExt = extFromMime(parsedOriginal.mime);
-  const originalFileName = `${fileBase}${originalExt}`;
   const originalPath = path.join(originalDir, originalFileName);
   fs.writeFileSync(originalPath, parsedOriginal.buffer);
 
-  let thumbFileName = originalFileName;
   if (parsedPreview) {
     thumbFileName = `${fileBase}${extFromMime(parsedPreview.mime)}`;
     const thumbPath = path.join(thumbsDir, thumbFileName);

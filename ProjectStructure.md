@@ -1,86 +1,108 @@
 ## 1. Project Concept & Structure
 
-This is an **Event Management System (EMS)**. It operates in three layers:
+Ignite 26 is an Event Management System with three layers:
 
-1. **Public Layer:** Landing page, countdown, and registration (for all students).
-2. **Participant Layer:** Personalized profiles and winner announcements (for registered students).
-3. **Admin Layer:** Management dashboard for check-ins, media uploads, and winner selection (for organizers).
+1. Public Layer: Landing page, countdown, registration, gallery, hall of fame.
+2. Participant Layer: Profile lookup, ticket PDF, shared records view.
+3. Admin Layer: Dashboard, check-ins, media management, winners, event settings.
 
-### **Recommended Folder Structure (MVC Architecture)**
+### Folder Structure (Current)
 
 ```text
-/freshero-portal
-├── /public            # Static assets (images, logos, fonts)
-├── /src
-│   ├── /components    # Reusable UI (Navbar, Timer, Modal)
-│   ├── /pages         # Full views (Home, Admin, Gallery)
-│   ├── /middleware    # Auth checks (is the user an admin?)
-│   ├── /styles        # Tailwind/CSS configurations
-│   └── /utils         # Validation logic & API helpers
-└── /database          # Schema files and seeds
-
+/ignite-26
+|-- /api
+|   |-- index.js              # Vercel single entrypoint (dispatches to server/)
+|-- /public
+|   |-- logo.jpg
+|-- /server
+|   |-- router.js             # API dispatcher
+|   |-- _db.js                # SQLite/libSQL schema + migrations
+|   |-- _media-storage.js     # Local or Vercel Blob media storage
+|   |-- event-settings.js     # Event settings API
+|   |-- media.js              # Media upload + moderation
+|   |-- ...
+|-- /src
+|   |-- /assets
+|   |-- /components
+|   |-- /lib
+|   |   |-- eventSettings.ts
+|   |   |-- useEventSettings.ts
+|   |-- /pages
+|   |   |-- admin
+|   |   |   |-- Dashboard.tsx
+|   |   |   |-- EventSettings.tsx
+|   |   |   |-- MediaUpload.tsx
+|   |   |   |-- MediaBulkImport.tsx
+|   |   |   |-- WinnersManager.tsx
+|   |   |   |-- ManagementTeamManager.tsx
+|   |   |   |-- Login.tsx
+|   |   |-- Home.tsx
+|   |   |-- Register.tsx
+|   |   |-- Gallery.tsx
+|   |   |-- HallOfFame.tsx
+|   |   |-- PublicMediaUpload.tsx
+|   |   |-- PublicRegistrationsView.tsx
+|   |   |-- ValidationHandler.tsx
+|   |   |-- MyProfile.tsx
+|-- /data                    # Local SQLite file in dev
+|-- /database                # DB notes and scripts (if present)
 ```
 
 ---
 
 ## 2. Pages and Routes
 
-You will need the following routes to ensure a smooth user journey:
-
-| Route | Page Name | Access | Purpose |
+| Route | Page | Access | Purpose |
 | --- | --- | --- | --- |
-| `/` | **Landing Page** | Public | Hero section, countdown, and "Register" button. |
-| `/register` | **Registration** | Public | Custom form replacing the Google Form. |
-| `/gallery` | **Media Hub** | Public | Grid of images/videos from the party. |
-| `/hall-of-fame` | **Winners** | Public | Showcase of game winners (Posturize style). |
-| `/admin` | **Dashboard** | Admin | Table of all participants with Check-in buttons. |
-| `/admin/upload` | **Media Manager** | Admin | Upload interface for gallery and winner cards. |
+| `/` | Home | Public | Hero, countdown, event details, day flow. |
+| `/register` | Registration | Public | Registration form. |
+| `/gallery` | Gallery | Public | Approved media gallery. |
+| `/upload-media` | Public Upload | Public | Public media submissions (pending). |
+| `/hall-of-fame` | Hall of Fame | Public | Winner showcase. |
+| `/my-profile` | My Profile | Public | Registration lookup + ticket PDF. |
+| `/records/:token` | Shared Records | Token | Admin-generated public share. |
+| `/validate/:token` | Validation Handler | Token | Entry validation tools. |
+| `/admin/login` | Admin Login | Admin | Admin authentication. |
+| `/admin` | Admin Dashboard | Admin | Check-ins, stats, actions. |
+| `/admin/upload` | Media Upload | Admin | Upload approved media. |
+| `/admin/upload-bulk` | Media Bulk Import | Admin | Drive/CSV imports. |
+| `/admin/winners` | Winners Manager | Admin | Manage hall of fame. |
+| `/admin/management-team` | Management Team | Admin | Manage coordinators. |
+| `/admin/event-settings` | Event Settings | Admin | Edit date/time/venue/countdown/dress code/day flow. |
 
 ---
 
 ## 3. Database & Authentication
 
-To handle participant data and media, you need a structured database.
+SQLite is used by default with optional libSQL/Turso support.
 
-### **Database Schema (Relational)**
+Core tables include:
 
-* **Users Table:** `id`, `name`, `roll_no`, `branch`, `email`, `phone`, `food_pref`, `check_in_status` (boolean), `timestamp`.
-* **Media Table:** `id`, `url`, `uploader_id`, `type` (image/video), `category` (general/winner).
-* **Winners Table:** `user_id`, `award_title` (e.g., Mr. Fresher), `image_url`.
+- `participants` (registrations, payment status, check-in)
+- `media` (uploads + status)
+- `winners` (hall of fame)
+- `management_team`
+- `activity_logs`
+- `event_settings` (title, venue, display date/time, countdown, flow, support note)
+- `auth_users` and `auth_sessions` (admin auth)
 
-### **Authentication**
+Authentication:
 
-* **Participant Auth:** Since it's a one-time college event, you can use **OTP-based login** (via phone or email) or just a **Roll Number + Phone** combination to view their personalized page.
-* **Admin Auth:** Secure login (Email/Password) restricted to the organizing committee.
-
----
-
-## 4. Form Validation Techniques
-
-Validation ensures your data is clean before it hits the database. You should use a **two-tier validation strategy**:
-
-### **A. Client-Side (Immediate Feedback)**
-
-* **Required Fields:** Using HTML5 `required` attribute.
-* **Regex Validation:** * *Email:* Must end with `@yourcollege.edu.in`.
-* *Phone:* Must be exactly 10 digits ($^[0-9]{10}$$).
-* *Roll Number:* Ensure it follows the college format (e.g., `24-CS-01`).
-
-
-* **Real-time UI:** Changing the input border to **Red** (invalid) or **Green** (valid) as the user types.
-
-### **B. Server-Side (Security)**
-
-* **Sanitization:** Cleaning the input to prevent SQL Injection or XSS (Cross-Site Scripting).
-* **Uniqueness Check:** Ensuring a Roll Number hasn't registered twice.
+- Participant access is token or lookup-based.
+- Admin access is email/password with session tokens.
 
 ---
 
-## 5. The "Check-in" Logic
+## 4. Media Upload Storage
 
-For the maintaining records part, the Admin Dashboard should have a **QR Scanner** or a **Searchable Table**.
+- Local dev: files are written to `public/uploads`.
+- Vercel: uses Vercel Blob and requires `BLOB_READ_WRITE_TOKEN`.
+- Public submissions are stored as `pending` until approved by admins.
 
-* When a student arrives, the admin searches their name.
-* Clicks "Check-In".
-* The system updates `check_in_status = true` and records the `check_in_time`.
-* **Analytics:** You can then see a live counter: *“345/500 Students Arrived.”*
+---
+
+## 5. Validation & Check-in Flow
+
+- Admin dashboard supports search + check-in updates.
+- Validation handler page validates QR or tokened records.
+- Activity logs capture admin actions for auditing.
