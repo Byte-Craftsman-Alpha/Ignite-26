@@ -135,8 +135,8 @@ export default function Home() {
           <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {quickDetails.map((item, i) => (
               <motion.div key={item.label} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }} className="flex items-center gap-4 p-6 rounded-2xl bg-[#0d0d1f]/90 border border-[#1e1e3f] hover:border-purple-500/30 transition-colors backdrop-blur-sm">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${item.tone === 'purple' ? 'bg-purple-500/20 text-purple-400' : item.tone === 'amber' ? 'bg-amber-500/20 text-amber-400' : 'bg-pink-500/20 text-pink-400'}`}>
-                  <item.icon size={22} />
+                <div className={`w-12 h-12 min-w-12 min-h-12 aspect-square shrink-0 rounded-xl flex items-center justify-center ${item.tone === 'purple' ? 'bg-purple-500/20 text-purple-400' : item.tone === 'amber' ? 'bg-amber-500/20 text-amber-400' : 'bg-pink-500/20 text-pink-400'}`}>
+                  <item.icon size={22} className="shrink-0" />
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 uppercase tracking-wider">{item.label}</p>
