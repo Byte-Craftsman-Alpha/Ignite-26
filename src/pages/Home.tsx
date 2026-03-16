@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import Countdown from '../components/Countdown';
 import SplashScreen from '../components/SplashScreen';
+import { useEventSettings } from '../lib/useEventSettings';
 
 const fadeUp = { hidden: { opacity: 0, y: 28 }, show: { opacity: 1, y: 0 } };
 
@@ -24,19 +25,6 @@ const EVENT_PILLARS = [
   { icon: Camera, title: 'Memory Walls', desc: 'Photo booths, portrait corners and roaming candid captures all day.' },
   { icon: Star, title: 'Fresher Crowns', desc: 'Mr. and Ms. Fresher finale with spotlight rounds and jury reveals.' },
   { icon: UtensilsCrossed, title: 'Grand Feast', desc: 'Curated dinner spread with multi-cuisine counters and chill zones.' },
-];
-
-const QUICK_DETAILS = [
-  { icon: Calendar, label: 'Date', value: '25 March 2026', tone: 'purple' },
-  { icon: Clock, label: 'Time', value: '11:00 AM Onwards', tone: 'amber' },
-  { icon: MapPin, label: 'Venue', value: 'Top secret', tone: 'pink' },
-];
-
-const FLOW = [
-  { time: '11:00', title: 'Kickoff and Entry Flow', desc: 'Wristbands, welcome desk, and opening drop.' },
-  { time: '12:30', title: 'Open Stage Rounds', desc: 'Solo and group performances with live judges.' },
-  { time: '15:00', title: 'Spotlight Challenges', desc: 'Interactive games and personality rounds.' },
-  { time: '18:30', title: 'Crown Ceremony', desc: 'Final results, awards and celebration set.' },
 ];
 
 const FLOATING_ICONS = [
@@ -49,6 +37,15 @@ const FLOATING_ICONS = [
 
 export default function Home() {
   const [showSplash, setShowSplash] = useState(false);
+  const { settings } = useEventSettings();
+
+  const quickDetails = useMemo(() => [
+    { icon: Calendar, label: 'Date', value: settings.dateLabel, tone: 'purple' },
+    { icon: Clock, label: 'Time', value: settings.timeLabel, tone: 'amber' },
+    { icon: MapPin, label: 'Venue', value: settings.venue, tone: 'pink' },
+  ], [settings.dateLabel, settings.timeLabel, settings.venue]);
+
+  const flow = useMemo(() => settings.flow, [settings.flow]);
 
   useEffect(() => {
     const key = 'ignite26_splash_seen';
@@ -111,7 +108,7 @@ export default function Home() {
 
           <motion.div variants={fadeUp} className="mb-10">
             <p className="text-purple-300 text-sm font-medium tracking-widest uppercase mb-6">Event Countdown</p>
-            <Countdown />
+            <Countdown targetDateIso={settings.countdownIso} />
           </motion.div>
 
           <motion.div variants={fadeUp} className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -136,7 +133,7 @@ export default function Home() {
       <section className="py-20 px-4 relative z-10">
         <div className="max-w-6xl mx-auto">
           <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {QUICK_DETAILS.map((item, i) => (
+            {quickDetails.map((item, i) => (
               <motion.div key={item.label} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }} className="flex items-center gap-4 p-6 rounded-2xl bg-[#0d0d1f]/90 border border-[#1e1e3f] hover:border-purple-500/30 transition-colors backdrop-blur-sm">
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${item.tone === 'purple' ? 'bg-purple-500/20 text-purple-400' : item.tone === 'amber' ? 'bg-amber-500/20 text-amber-400' : 'bg-pink-500/20 text-pink-400'}`}>
                   <item.icon size={22} />
@@ -179,11 +176,11 @@ export default function Home() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="p-5 rounded-2xl border border-cyan-500/30 bg-cyan-500/10">
               <p className="text-xs text-cyan-300 uppercase tracking-wider mb-1">For Boys / Male</p>
-              <p className="text-xl font-bold text-white">Formals</p>
+              <p className="text-xl font-bold text-white">{settings.dressCodeMale}</p>
             </motion.div>
             <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.06 }} className="p-5 rounded-2xl border border-pink-500/30 bg-pink-500/10">
               <p className="text-xs text-pink-300 uppercase tracking-wider mb-1">For Girls / Ladies</p>
-              <p className="text-xl font-bold text-white">Western Wear</p>
+              <p className="text-xl font-bold text-white">{settings.dressCodeFemale}</p>
             </motion.div>
           </div>
         </div>
@@ -218,8 +215,8 @@ export default function Home() {
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {FLOW.map((item, i) => (
-              <motion.div key={item.time} initial={{ opacity: 0, x: i % 2 === 0 ? -20 : 20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }} className="p-5 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-sm">
+            {flow.map((item, i) => (
+              <motion.div key={`${item.time}-${item.title}`} initial={{ opacity: 0, x: i % 2 === 0 ? -20 : 20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }} className="p-5 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-sm">
                 <div className="flex items-start gap-4">
                   <div className="px-3 py-1 rounded-lg bg-amber-500/15 border border-amber-500/40 text-amber-300 text-sm font-bold">{item.time}</div>
                   <div>
@@ -257,4 +254,3 @@ export default function Home() {
     </div>
   );
 }
-

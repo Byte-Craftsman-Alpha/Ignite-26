@@ -5,6 +5,7 @@ import { User, Hash, Phone, Mail, CheckCircle, XCircle, Search, QrCode, Download
 import { jsPDF } from 'jspdf';
 import QRCode from 'qrcode';
 import { getErrorMessage, readJsonSafe } from '../lib/http';
+import { useEventSettings } from '../lib/useEventSettings';
 
 interface Participant {
   id: number;
@@ -22,22 +23,6 @@ interface Participant {
   registered_at: string;
 }
 
-const EVENT_INFO = {
-  title: "Ignite'26 Fresher Event",
-  date: 'March 15, 2026',
-  time: '11:00 AM onwards',
-  venue: 'Top secret (to be announced to verified participants)',
-  dressCodeMale: 'Formals',
-  dressCodeFemale: 'Western Wear',
-  supportNote: 'Payment verification may take 2-3 days. Please wait for confirmation from the support team.',
-};
-
-const EVENT_FLOW = [
-  '11:00 - Kickoff and Entry Flow',
-  '12:30 - Open Stage Rounds',
-  '15:00 - Spotlight Challenges',
-  '18:30 - Crown Ceremony',
-];
 
 function fileNameSafe(text: string) {
   return text.replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-$/g, '').toLowerCase();
@@ -50,6 +35,7 @@ async function dataUrlToFile(dataUrl: string, name: string) {
 }
 
 export default function MyProfile() {
+  const { settings } = useEventSettings();
   const [email, setEmail] = useState('');
   const [rollNumber, setRollNumber] = useState('');
   const [whatsappNumber, setWhatsappNumber] = useState('');
@@ -194,7 +180,7 @@ export default function MyProfile() {
       doc.text("Ignite'26 Identity Pass", margin + 20, margin + 58);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(11);
-      doc.text(EVENT_INFO.title, margin + 20, margin + 78);
+      doc.text(settings.title, margin + 20, margin + 78);
 
       let y = margin + 124;
       doc.setTextColor(133, 168, 255);
@@ -272,13 +258,13 @@ export default function MyProfile() {
       doc.setTextColor(233, 237, 248);
 
       const leftBlock = [
-        `Date: ${EVENT_INFO.date}`,
-        `Time: ${EVENT_INFO.time}`,
-        `Venue: ${EVENT_INFO.venue}`,
+        `Date: ${settings.dateLabel}`,
+        `Time: ${settings.timeLabel}`,
+        `Venue: ${settings.venue}`,
       ];
       const rightBlock = [
-        `Dress Code (Boys): ${EVENT_INFO.dressCodeMale}`,
-        `Dress Code (Girls): ${EVENT_INFO.dressCodeFemale}`,
+        `Dress Code (Boys): ${settings.dressCodeMale}`,
+        `Dress Code (Girls): ${settings.dressCodeFemale}`,
       ];
 
       leftBlock.forEach((line, idx) => doc.text(line, margin + 18, y + 22 + idx * 16));
@@ -291,7 +277,8 @@ export default function MyProfile() {
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(233, 237, 248);
       doc.setFontSize(10);
-      EVENT_FLOW.forEach((line, idx) => doc.text(`- ${line}`, margin + 18, y + 18 + idx * 15));
+      const flowLines = settings.flow.map((item) => `${item.time} - ${item.title}`);
+      flowLines.forEach((line, idx) => doc.text(`- ${line}`, margin + 18, y + 18 + idx * 15));
 
       y += 90;
       doc.setDrawColor(41, 45, 74);
@@ -466,7 +453,7 @@ export default function MyProfile() {
                   ) : (
                     <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
                       <p className="text-amber-200 text-sm leading-relaxed">
-                        {EVENT_INFO.supportNote}
+                        {settings.supportNote}
                       </p>
                       <Link
                         to="/management-team"

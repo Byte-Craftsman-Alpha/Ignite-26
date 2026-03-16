@@ -192,6 +192,21 @@ const schemaStatements = [
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `,
+  `
+    CREATE TABLE IF NOT EXISTS event_settings (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      title TEXT NOT NULL,
+      date_label TEXT NOT NULL,
+      time_label TEXT NOT NULL,
+      venue TEXT NOT NULL,
+      dress_code_male TEXT NOT NULL,
+      dress_code_female TEXT NOT NULL,
+      countdown_iso TEXT NOT NULL,
+      flow_json TEXT NOT NULL DEFAULT '[]',
+      support_note TEXT NOT NULL DEFAULT '',
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `,
 ];
 
 async function columnExists(tableName, columnName) {
@@ -288,6 +303,8 @@ async function initSchema() {
   await ensureColumn('media', 'status', "TEXT NOT NULL DEFAULT 'approved'");
   await ensureColumn('media', 'uploaded_by', "TEXT NOT NULL DEFAULT 'admin'");
   await ensureColumn('management_team', 'profile_image', "TEXT NOT NULL DEFAULT ''");
+  await ensureColumn('event_settings', 'support_note', "TEXT NOT NULL DEFAULT ''");
+  await ensureColumn('event_settings', 'flow_json', "TEXT NOT NULL DEFAULT '[]'");
 
   const shareAccess = await executeStatement('SELECT id FROM participant_share_access WHERE id = 1');
   if (!shareAccess.rows[0]) {
@@ -317,6 +334,36 @@ async function initSchema() {
     await executeStatement(
       'UPDATE validation_handler_access SET password_hash = ?, updated_at = ? WHERE id = 1',
       [defaultHandlerPasswordHash, new Date().toISOString()]
+    );
+  }
+
+  const defaultEventFlow = JSON.stringify([
+    { time: '11:00', title: 'Kickoff and Entry Flow', desc: 'Wristbands, welcome desk, and opening drop.' },
+    { time: '12:30', title: 'Open Stage Rounds', desc: 'Solo and group performances with live judges.' },
+    { time: '15:00', title: 'Spotlight Challenges', desc: 'Interactive games and personality rounds.' },
+    { time: '18:30', title: 'Crown Ceremony', desc: 'Final results, awards and celebration set.' },
+  ]);
+  const eventSettings = await executeStatement('SELECT id FROM event_settings WHERE id = 1');
+  if (!eventSettings.rows[0]) {
+    await executeStatement(
+      `
+        INSERT INTO event_settings (
+          id, title, date_label, time_label, venue, dress_code_male, dress_code_female,
+          countdown_iso, flow_json, support_note, updated_at
+        ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      [
+        "Ignite'26 Fresher Event",
+        '25 March 2026',
+        '11:00 AM Onwards',
+        'Top secret',
+        'Formals',
+        'Western Wear',
+        '2026-03-25T11:00:00',
+        defaultEventFlow,
+        'Payment verification may take 2-3 days. Please wait for confirmation from the support team.',
+        new Date().toISOString(),
+      ]
     );
   }
 

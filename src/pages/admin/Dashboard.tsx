@@ -23,6 +23,7 @@ import {
   Power,
   QrCode,
   MoreVertical,
+  CalendarClock,
 } from 'lucide-react';
 import { authHeaders } from '../../lib/auth';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -1121,6 +1122,13 @@ export default function AdminDashboard() {
                 className="w-full px-3 py-2.5 text-sm text-amber-200 hover:bg-amber-500/10 flex items-center gap-2 border-t border-white/5"
               >
                 <Trophy size={14} /> Winners Manager
+              </Link>
+              <Link
+                to="/admin/event-settings"
+                onClick={() => setOpenPanelMenu(null)}
+                className="w-full px-3 py-2.5 text-sm text-emerald-200 hover:bg-emerald-500/10 flex items-center gap-2 border-t border-white/5"
+              >
+                <CalendarClock size={14} /> Event Settings
               </Link>
             </>
           )}

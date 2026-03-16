@@ -16,6 +16,7 @@ import MediaBulkImport from './pages/admin/MediaBulkImport';
 import WinnersManager from './pages/admin/WinnersManager';
 import ManagementTeamManager from './pages/admin/ManagementTeamManager';
 import ActivityLogsHidden from './pages/admin/ActivityLogsHidden';
+import EventSettings from './pages/admin/EventSettings';
 import AdminGuard from './components/AdminGuard';
 import SiteFooter from './components/SiteFooter';
 
@@ -38,6 +39,7 @@ export default function App() {
         <Route path="/admin/upload" element={<AdminGuard><MediaUpload /></AdminGuard>} />
         <Route path="/admin/upload-bulk" element={<AdminGuard><MediaBulkImport /></AdminGuard>} />
         <Route path="/admin/winners" element={<AdminGuard><WinnersManager /></AdminGuard>} />
+        <Route path="/admin/event-settings" element={<AdminGuard><EventSettings /></AdminGuard>} />
         <Route path="/admin/management-team" element={<AdminGuard><ManagementTeamManager /></AdminGuard>} />
         <Route path="/admin/_activity-log-room-26" element={<AdminGuard><ActivityLogsHidden /></AdminGuard>} />
       </Routes>

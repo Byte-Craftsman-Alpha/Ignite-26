@@ -1,6 +1,7 @@
 import activities from './activities.js';
 import checkin from './checkin.js';
 import emailOtp from './email-otp.js';
+import eventSettings from './event-settings.js';
 import managementTeam from './management-team.js';
 import media from './media.js';
 import participantLookup from './participant-lookup.js';
@@ -27,6 +28,7 @@ const routeHandlers = new Map([
   ['/auth/signout', signout],
   ['/checkin', checkin],
   ['/email-otp', emailOtp],
+  ['/event-settings', eventSettings],
   ['/management-team', managementTeam],
   ['/media', media],
   ['/participant-lookup', participantLookup],

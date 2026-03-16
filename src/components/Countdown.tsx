@@ -1,15 +1,20 @@
-import { useState, useEffect } from 'react';
-
-const EVENT_DATE = new Date('2026-03-25T11:00:00');
+import { useMemo, useState, useEffect } from 'react';
+import { defaultEventSettings } from '../lib/eventSettings';
 
 function pad(n: number) { return String(n).padStart(2, '0'); }
 
-export default function Countdown() {
+export default function Countdown({ targetDateIso }: { targetDateIso?: string }) {
+  const eventDate = useMemo(() => {
+    const candidate = targetDateIso || defaultEventSettings.countdownIso;
+    const parsed = new Date(candidate);
+    if (Number.isNaN(parsed.getTime())) return new Date(defaultEventSettings.countdownIso);
+    return parsed;
+  }, [targetDateIso]);
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, ended: false });
 
   useEffect(() => {
     const calc = () => {
-      const diff = EVENT_DATE.getTime() - Date.now();
+      const diff = eventDate.getTime() - Date.now();
       if (diff <= 0) { setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0, ended: true }); return; }
       setTimeLeft({
         days: Math.floor(diff / 86400000),
@@ -22,7 +27,7 @@ export default function Countdown() {
     calc();
     const id = setInterval(calc, 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [eventDate]);
 
   if (timeLeft.ended) {
     return (
