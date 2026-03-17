@@ -21,12 +21,12 @@ export interface EventSettings {
 
 export const defaultEventSettings: EventSettings = {
   title: "Ignite'26 Fresher Event",
-  dateLabel: '25 March 2026',
+  dateLabel: '23 March 2026',
   timeLabel: '11:00 AM Onwards',
-  venue: 'Top secret',
+  venue: 'BLACK HORSE Multi Cuisine Restaurant And Banquet Hall, Vijay Chowk, Golghar, Gorakhpur',
   dressCodeMale: 'Formals',
   dressCodeFemale: 'Western Wear',
-  countdownIso: '2026-03-25T11:00:00',
+  countdownIso: '2026-03-23T11:00:00',
   flow: [
     { time: '11:00', title: 'Kickoff and Entry Flow', desc: 'Wristbands, welcome desk, and opening drop.' },
     { time: '12:30', title: 'Open Stage Rounds', desc: 'Solo and group performances with live judges.' },

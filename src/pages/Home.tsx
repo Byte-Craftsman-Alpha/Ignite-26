@@ -83,7 +83,7 @@ export default function Home() {
         ))}
       </div>
 
-      <section className="relative min-h-screen flex items-center justify-center pt-8">
+      <section className="relative min-h-screen flex items-center justify-center pt-8 scroll-snap-section">
         <div className="absolute inset-0 bg-gradient-to-b from-[#0d0a1a]/20 via-[#0d0a1a]/35 to-[#0d0a1a]/45 pointer-events-none" />
 
         <motion.div className="relative z-10 text-center px-4 max-w-5xl mx-auto" initial="hidden" animate="show" variants={{ hidden: {}, show: { transition: { staggerChildren: 0.08 } } }}>
@@ -130,7 +130,7 @@ export default function Home() {
         </motion.div>
       </section>
 
-      <section className="py-20 px-4 relative z-10">
+      <section className="py-20 px-4 relative z-10 scroll-snap-section">
         <div className="max-w-6xl mx-auto">
           <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {quickDetails.map((item, i) => (
@@ -148,7 +148,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="py-8 px-4 relative z-10">
+      <section className="py-8 px-4 relative z-10 scroll-snap-section">
         <div className="max-w-6xl mx-auto">
           <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-sm">
             <motion.div className="flex gap-6 py-4 whitespace-nowrap" animate={{ x: ['0%', '-50%'] }} transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}>
@@ -166,7 +166,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="py-12 px-4 relative z-10">
+      <section className="py-12 px-4 relative z-10 scroll-snap-section">
         <div className="max-w-4xl mx-auto">
           <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-6">
             <h2 className="text-3xl sm:text-4xl font-bold mb-2">Dress Code</h2>
@@ -186,7 +186,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="py-16 px-4 relative z-10">
+      <section className="py-16 px-4 relative z-10 scroll-snap-section">
         <div className="max-w-6xl mx-auto">
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-14">
             <h2 className="text-3xl sm:text-4xl font-bold mb-3">What Awaits You</h2>
@@ -207,7 +207,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="py-18 px-4 relative z-10">
+      <section className="py-18 px-4 relative z-10 scroll-snap-section">
         <div className="max-w-6xl mx-auto">
           <motion.div initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mb-8">
             <h2 className="text-3xl sm:text-4xl font-bold mb-2">Day Flow</h2>
@@ -230,7 +230,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="py-20 px-4 relative z-10">
+      <section className="py-20 px-4 relative z-10 scroll-snap-section">
         <div className="max-w-4xl mx-auto">
           <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} className="relative rounded-3xl overflow-hidden border border-white/10">
             <div className="absolute inset-0 bg-gradient-to-br from-[#ff2d78] to-[#7c3aed]" />
@@ -254,3 +254,4 @@ export default function Home() {
     </div>
   );
 }
+
