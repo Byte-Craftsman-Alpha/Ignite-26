@@ -49,7 +49,7 @@ function validateField(name: string, value: string): FieldState {
     case 'roll_number':
       return /^\d{13}$/.test(value.trim()) ? 'valid' : 'invalid';
     case 'email':
-      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? 'valid' : 'invalid';
+      return /^[^\s@]+@gmail\.com$/i.test(value.trim()) ? 'valid' : 'invalid';
     case 'whatsapp_number':
       return /^\d{10}$/.test(value) ? 'valid' : 'invalid';
     case 'payment_id':
@@ -118,7 +118,7 @@ export default function Register() {
 
   const handleSendOtp = async () => {
     if (validateField('email', form.email) !== 'valid') {
-      setError('Enter a valid email before requesting OTP.');
+      setError('Enter a valid gmail.com address before requesting OTP.');
       return;
     }
 
@@ -343,7 +343,7 @@ export default function Register() {
                     <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="yourname@example.com"
                       className={`w-full bg-white/5 border rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-600 focus:outline-none transition-colors ${borderClass('email')}`} />
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">OTP and confirmation mails may arrive in Spam or Promotions folders.</p>
+                  <p className="text-xs text-gray-500 mt-1">Only gmail.com addresses are accepted. OTP and confirmation mails may arrive in Spam or Promotions folders.</p>
                   <div className="mt-2 flex flex-col sm:flex-row gap-2">
                     <button
                       type="button"
@@ -529,4 +529,3 @@ export default function Register() {
     </div>
   );
 }
-

@@ -5,11 +5,16 @@ import { sendRegistrationConfirmationEmail } from './_mailer.js';
 
 const ALLOWED_YEARS = ['1st Year', '2nd Year'];
 
+function isGmailEmail(email) {
+  return /^[^\s@]+@gmail\.com$/.test(String(email || '').trim().toLowerCase());
+}
+
 function validateParticipantInput(payload) {
   const { email, full_name, roll_number, branch, year, skills, payment_id, whatsapp_number } = payload;
   if (!email || !full_name || !roll_number || !branch || !year || skills === undefined || !payment_id || !whatsapp_number) {
     return 'All fields are required';
   }
+  if (!isGmailEmail(email)) return 'Only gmail.com addresses are allowed';
   if (!/^\d{13}$/.test(String(roll_number))) return 'Roll number must be exactly 13 digits';
   if (!/^\d{10}$/.test(String(whatsapp_number))) return 'WhatsApp number must be exactly 10 digits';
   if (!Array.isArray(skills)) return 'Invalid skills value';

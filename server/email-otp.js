@@ -14,6 +14,10 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+function isGmailEmail(email) {
+  return /^[^\s@]+@gmail\.com$/.test(String(email || '').trim().toLowerCase());
+}
+
 function hashOtp(otp) {
   return crypto.createHash('sha256').update(String(otp)).digest('hex');
 }
@@ -40,6 +44,9 @@ export default async function handler(req, res) {
 
     if (!isValidEmail(normalizedEmail)) {
       return res.status(400).json({ error: 'Valid email is required' });
+    }
+    if (!isGmailEmail(normalizedEmail)) {
+      return res.status(400).json({ error: 'Only gmail.com addresses are allowed' });
     }
 
     if (action === 'send') {
