@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { User, Hash, Phone, Mail, CheckCircle, XCircle, Search, QrCode, Download, Share2, FileDown, AlertCircle, Users } from 'lucide-react';
-import { jsPDF } from 'jspdf';
 import QRCode from 'qrcode';
 import { getErrorMessage, readJsonSafe } from '../lib/http';
 import { useEventSettings } from '../lib/useEventSettings';
@@ -32,6 +31,15 @@ async function dataUrlToFile(dataUrl: string, name: string) {
   const response = await fetch(dataUrl);
   const blob = await response.blob();
   return new File([blob], name, { type: blob.type || 'image/png' });
+}
+
+async function loadImage(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('Failed to load pass template image'));
+    img.src = src;
+  });
 }
 
 export default function MyProfile() {
@@ -154,144 +162,69 @@ export default function MyProfile() {
     setPdfBusy(true);
     setActionMessage('');
     try {
-      const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
-      const pageW = doc.internal.pageSize.getWidth();
-      const pageH = doc.internal.pageSize.getHeight();
-      const margin = 34;
-      const contentW = pageW - margin * 2;
-      const qrDataUrl = await QRCode.toDataURL(qrPayload);
+      const template = await loadImage('/event-pass.png');
+      const canvas = document.createElement('canvas');
+      canvas.width = template.naturalWidth || template.width;
+      canvas.height = template.naturalHeight || template.height;
 
-      doc.setFillColor(5, 5, 16);
-      doc.rect(0, 0, pageW, pageH, 'F');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas not supported');
 
-      doc.setFillColor(13, 13, 31);
-      doc.roundedRect(margin, margin, contentW, pageH - margin * 2, 14, 14, 'F');
+      ctx.drawImage(template, 0, 0, canvas.width, canvas.height);
 
-      doc.setFillColor(34, 18, 58);
-      doc.roundedRect(margin, margin, contentW, 104, 14, 14, 'F');
-      doc.setTextColor(197, 179, 255);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      doc.text('IGNITE 26 | VERIFIED EVENT PASS', margin + 20, margin + 28);
+      const qrY = 195;
+      const qrSize = 208;
+      const qrRightOffset = 143;
+      const qrX = canvas.width - qrRightOffset - qrSize;
 
-      doc.setTextColor(255, 255, 255);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(23);
-      doc.text("Ignite'26 Identity Pass", margin + 20, margin + 58);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(11);
-      doc.text(settings.title, margin + 20, margin + 78);
-
-      let y = margin + 124;
-      doc.setTextColor(133, 168, 255);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      doc.text('PARTICIPANT', margin + 18, y);
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(20);
-      doc.text(participant.full_name, margin + 18, y + 24);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      doc.setTextColor(169, 176, 202);
-      doc.text(`${participant.roll_number} | ${participant.branch} | ${participant.year}`, margin + 18, y + 42);
-
-      y += 62;
-      doc.setDrawColor(41, 45, 74);
-      doc.line(margin + 18, y, pageW - margin - 18, y);
-      y += 22;
-
-      const col1X = margin + 18;
-      const col2X = margin + 248;
-      const valueOffset = 78;
-      const rowGap = 20;
-      const rows = [
-        ['Email', participant.email, 'WhatsApp', participant.whatsapp_number],
-        ['Payment ID', participant.payment_id, 'Registered On', new Date(participant.registered_at).toLocaleString()],
-        ['Skills', participant.skills.join(', ') || '-', 'Status', 'Payment Verified'],
-      ];
-
-      doc.setFontSize(10);
-      rows.forEach((item, idx) => {
-        const top = y + idx * rowGap;
-        doc.setTextColor(138, 153, 193);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`${item[0]}:`, col1X, top);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(233, 237, 248);
-        doc.text(doc.splitTextToSize(item[1], 150), col1X + valueOffset, top);
-
-        doc.setTextColor(138, 153, 193);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`${item[2]}:`, col2X, top);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(233, 237, 248);
-        doc.text(doc.splitTextToSize(item[3], 180), col2X + valueOffset, top);
+      const qrCanvas = document.createElement('canvas');
+      await QRCode.toCanvas(qrCanvas, qrPayload, {
+        width: qrSize,
+        margin: 0,
+        errorCorrectionLevel: 'M',
+        color: { dark: '#dcc073', light: '#00000000' },
       });
 
-      y += rows.length * rowGap + 18;
-      doc.setDrawColor(41, 45, 74);
-      doc.line(margin + 18, y, pageW - margin - 18, y);
+      ctx.save();
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = '#dcc073';
+      ctx.strokeRect(qrX - 3, qrY - 3, qrSize + 6, qrSize + 6);
+      ctx.restore();
 
-      y += 20;
-      const qrBoxW = 152;
-      const qrBoxH = 172;
-      const qrCardX = margin + (contentW - qrBoxW) / 2;
-      const qrCardY = y;
-      const qrImageSize = 116;
-      const qrImageX = qrCardX + (qrBoxW - qrImageSize) / 2;
-      const qrImageY = qrCardY + 14;
+      ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
 
-      doc.setFillColor(22, 22, 44);
-      doc.roundedRect(qrCardX, qrCardY, qrBoxW, qrBoxH, 10, 10, 'F');
-      doc.addImage(qrDataUrl, 'PNG', qrImageX, qrImageY, qrImageSize, qrImageSize);
-      doc.setFontSize(8.5);
-      doc.setTextColor(170, 184, 220);
-      doc.text('Mandatory for check-in validation', qrCardX + qrBoxW / 2, qrCardY + qrBoxH - 16, { align: 'center' });
+      const rollTextY = qrY + qrSize + 28;
+      const rollToNameGap = 18;
 
-      y += qrBoxH + 24;
-      doc.setTextColor(133, 168, 255);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(11);
-      doc.text('EVENT DETAILS', margin + 18, y);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10.5);
-      doc.setTextColor(233, 237, 248);
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#dcc073';
+      ctx.font = '700 20px Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial';
+      ctx.textBaseline = 'top';
+      ctx.fillText(String(participant.roll_number || '').trim(), qrX + qrSize / 2, rollTextY);
+      ctx.restore();
 
-      const leftBlock = [
-        `Date: ${settings.dateLabel}`,
-        `Time: ${settings.timeLabel}`,
-        `Venue: ${settings.venue}`,
-      ];
-      const rightBlock = [
-        `Dress Code (Boys): ${settings.dressCodeMale}`,
-        `Dress Code (Girls): ${settings.dressCodeFemale}`,
-      ];
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#dcc073';
+      ctx.font = '700 56px Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial';
+      ctx.textBaseline = 'top';
+      ctx.fillText(String(participant.full_name || '').trim(), qrX + qrSize / 2, rollTextY + 20 + rollToNameGap);
+      ctx.restore();
 
-      leftBlock.forEach((line, idx) => doc.text(line, margin + 18, y + 22 + idx * 16));
-      rightBlock.forEach((line, idx) => doc.text(line, margin + 302, y + 22 + idx * 16));
+      const blob: Blob | null = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) throw new Error('Failed to generate pass image');
 
-      y += 78;
-      doc.setTextColor(133, 168, 255);
-      doc.setFont('helvetica', 'bold');
-      doc.text('PROGRAM FLOW', margin + 18, y);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(233, 237, 248);
-      doc.setFontSize(10);
-      const flowLines = settings.flow.map((item) => `${item.time} - ${item.title}`);
-      flowLines.forEach((line, idx) => doc.text(`- ${line}`, margin + 18, y + 18 + idx * 15));
-
-      y += 90;
-      doc.setDrawColor(41, 45, 74);
-      doc.line(margin + 18, y, pageW - margin - 18, y);
-      doc.setTextColor(160, 171, 198);
-      doc.setFontSize(9);
-      doc.text('Carry this pass (digital/printed) with college ID at entry.', margin + 18, y + 16);
-      doc.text('Need help? Open Management Team page and contact the undersigned coordinators.', margin + 18, y + 30);
-
-      const fileName = `ignite26-pass-${fileNameSafe(participant.full_name || participant.roll_number)}.pdf`;
-      doc.save(fileName);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ignite26-pass-${fileNameSafe(participant.full_name || participant.roll_number)}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
     } catch (err) {
-      setActionMessage(err instanceof Error ? err.message : 'Failed to generate PDF');
+      setActionMessage(err instanceof Error ? err.message : 'Failed to generate pass image');
     } finally {
       setPdfBusy(false);
     }
@@ -448,7 +381,7 @@ export default function MyProfile() {
                       disabled={pdfBusy}
                       className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-[#ff2d78] to-[#7c3aed] text-white font-semibold hover:opacity-90 disabled:opacity-50 inline-flex items-center justify-center gap-2"
                     >
-                      <FileDown size={16} /> {pdfBusy ? 'Generating PDF...' : 'Download Event PDF Pass'}
+                      <FileDown size={16} /> {pdfBusy ? 'Generating Pass...' : 'Download Event Pass'}
                     </button>
                   ) : (
                     <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
