@@ -90,6 +90,18 @@ async function findParticipants(value) {
     .all(needle, needle, needle, needle, needle)).map(toParticipant);
 }
 
+async function exportParticipants() {
+  return (await db
+    .prepare(
+      `
+        SELECT *
+        FROM participants
+        ORDER BY registered_at DESC
+      `
+    )
+    .all()).map(toParticipant);
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -111,6 +123,11 @@ export default async function handler(req, res) {
       const value = parsePayloadToLookupValue(req.body?.qr_text || req.body?.query || '');
       if (!value) return res.status(400).json({ error: 'query or qr_text is required' });
       const rows = await findParticipants(value);
+      return res.status(200).json({ ok: true, rows, count: rows.length });
+    }
+
+    if (action === 'export') {
+      const rows = await exportParticipants();
       return res.status(200).json({ ok: true, rows, count: rows.length });
     }
 

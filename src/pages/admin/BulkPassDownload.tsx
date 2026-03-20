@@ -287,7 +287,7 @@ export default function BulkPassDownload() {
   return (
     <div className="min-h-screen bg-[#050510] grid-bg text-white pt-20 pb-16">
       <div className="max-w-6xl mx-auto px-4">
-        <div className="flex items-center justify-between gap-3 mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div className="flex items-center gap-4">
             <Link to="/admin" className="text-gray-400 hover:text-white">
               <ArrowLeft size={20} />
@@ -300,7 +300,7 @@ export default function BulkPassDownload() {
           <button
             onClick={downloadZip}
             disabled={downloading || selected.size === 0}
-            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#ff2d78] to-[#7c3aed] text-white font-semibold hover:opacity-90 disabled:opacity-50 inline-flex items-center gap-2"
+            className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#ff2d78] to-[#7c3aed] text-white font-semibold hover:opacity-90 disabled:opacity-50 inline-flex items-center justify-center gap-2"
           >
             <Download size={16} /> {downloading ? 'Working...' : `Download ZIP (${selected.size})`}
           </button>
@@ -320,7 +320,7 @@ export default function BulkPassDownload() {
             type="button"
             onClick={toggleAllFiltered}
             disabled={filtered.length === 0}
-            className="px-4 py-3 rounded-xl border border-white/15 bg-white/5 text-gray-200 hover:bg-white/10 disabled:opacity-50 inline-flex items-center gap-2"
+            className="w-full sm:w-auto px-4 py-3 rounded-xl border border-white/15 bg-white/5 text-gray-200 hover:bg-white/10 disabled:opacity-50 inline-flex items-center justify-center gap-2"
           >
             {allFilteredSelected ? <CheckSquare size={16} /> : <Square size={16} />}
             {allFilteredSelected ? 'Unselect Filtered' : 'Select Filtered'}

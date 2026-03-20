@@ -85,6 +85,7 @@ interface PanelMenuState {
   menu: 'shortcuts' | 'data' | 'share' | 'handler';
   top: number;
   left: number;
+  width: number;
   openUp: boolean;
 }
 
@@ -123,6 +124,10 @@ function parseSkills(raw: string): string[] {
     .split(',')
     .map(item => item.trim())
     .filter(Boolean);
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
 }
 
 export default function AdminDashboard() {
@@ -516,13 +521,18 @@ export default function AdminDashboard() {
     setQrModal({ title: 'Shared View Access Link', value: link });
   };
 
-  const toggleActionMenu = (event: React.MouseEvent<HTMLButtonElement>, participantId: number) => {
+  const toggleActionMenu = (event: React.MouseEvent, participantId: number) => {
     event.stopPropagation();
     const rect = event.currentTarget.getBoundingClientRect();
     const estimatedHeight = 220;
+    const estimatedWidth = 176;
+    const padding = 12;
+
     const openUp = rect.bottom + estimatedHeight > window.innerHeight && rect.top > estimatedHeight;
-    const top = openUp ? rect.top - 8 : rect.bottom + 8;
-    const left = Math.min(rect.right, window.innerWidth - 12);
+    const left = clamp(rect.right, padding + estimatedWidth, window.innerWidth - padding);
+    const top = openUp
+      ? clamp(rect.top - 8, padding + estimatedHeight, window.innerHeight - padding)
+      : clamp(rect.bottom + 8, padding, window.innerHeight - padding - estimatedHeight);
 
     setOpenActionMenu((prev) => {
       if (prev?.participantId === participantId) return null;
@@ -532,19 +542,27 @@ export default function AdminDashboard() {
   };
 
   const togglePanelMenu = (
-    event: React.MouseEvent<HTMLButtonElement>,
+    event: React.MouseEvent,
     menu: PanelMenuState['menu'],
-    estimatedHeight = 220
+    estimatedHeight: number
   ) => {
     event.stopPropagation();
     const rect = event.currentTarget.getBoundingClientRect();
+    const padding = 12;
+
+    const maxWidth = Math.max(180, window.innerWidth - padding * 2);
+    const estimatedWidth = Math.min(224, maxWidth);
+
     const openUp = rect.bottom + estimatedHeight > window.innerHeight && rect.top > estimatedHeight;
-    const top = openUp ? rect.top - 8 : rect.bottom + 8;
-    const left = Math.min(rect.right, window.innerWidth - 12);
+    const desiredLeft = rect.right - estimatedWidth;
+    const left = clamp(desiredLeft, padding, window.innerWidth - padding - estimatedWidth);
+    const top = openUp
+      ? clamp(rect.top - 8, padding + estimatedHeight, window.innerHeight - padding)
+      : clamp(rect.bottom + 8, padding, window.innerHeight - padding - estimatedHeight);
 
     setOpenPanelMenu((prev) => {
       if (prev?.menu === menu) return null;
-      return { menu, top, left, openUp };
+      return { menu, top, left, width: estimatedWidth, openUp };
     });
     setOpenActionMenu(null);
   };
@@ -1093,11 +1111,12 @@ export default function AdminDashboard() {
       {openPanelMenu && (
         <div
           data-dashboard-menu="true"
-          className="fixed w-56 rounded-xl border border-[#2a2a4a] bg-[#121225] shadow-xl z-[9999] overflow-hidden"
+          className="fixed rounded-xl border border-[#2a2a4a] bg-[#121225] shadow-xl z-[9999] overflow-hidden"
           style={{
             top: openPanelMenu.top,
             left: openPanelMenu.left,
-            transform: openPanelMenu.openUp ? 'translate(-100%, -100%)' : 'translateX(-100%)',
+            width: openPanelMenu.width,
+            transform: openPanelMenu.openUp ? 'translateY(-100%)' : undefined,
           }}
         >
           {openPanelMenu.menu === 'shortcuts' && (

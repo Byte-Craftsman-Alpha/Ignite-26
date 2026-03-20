@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Shield, Camera, Search, CheckCircle2, XCircle, QrCode, X } from 'lucide-react';
 import jsQR from 'jsqr';
@@ -21,6 +21,100 @@ interface Participant {
   registered_at: string;
 }
 
+type CacheEnvelope = {
+  v: 1;
+  ts: number;
+  iv: string;
+  cipher: string;
+};
+
+const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+
+function normalize(value: unknown) {
+  return String(value ?? '').trim();
+}
+
+function normalizePhone(value: unknown) {
+  const digits = normalize(value).replace(/\D/g, '');
+  if (digits.length === 10) return digits;
+  if (digits.length === 11 && digits.startsWith('0')) return digits.slice(1);
+  if (digits.length === 12 && digits.startsWith('91')) return digits.slice(2);
+  return digits;
+}
+
+function parsePayloadToLookupValue(payload: unknown) {
+  const raw = normalize(payload);
+  if (!raw) return '';
+  try {
+    const parsed = JSON.parse(raw);
+    const fromJson =
+      normalize((parsed as any)?.roll_number)
+      || normalize((parsed as any)?.rollNumber)
+      || normalize((parsed as any)?.payment_id)
+      || normalize((parsed as any)?.paymentId)
+      || normalize((parsed as any)?.email)
+      || normalize((parsed as any)?.whatsapp_number)
+      || normalize((parsed as any)?.whatsapp)
+      || normalize((parsed as any)?.id);
+    if (fromJson) return fromJson;
+  } catch {
+    // ignore non-JSON payloads
+  }
+  return raw;
+}
+
+function base64FromBytes(bytes: Uint8Array) {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 1) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
+}
+
+function bytesFromBase64(encoded: string) {
+  const binary = atob(encoded);
+  const out = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) out[i] = binary.charCodeAt(i);
+  return out;
+}
+
+async function deriveCacheKey(password: string, token: string) {
+  const enc = new TextEncoder();
+  const baseKey = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt: enc.encode(`ignite26:handler:${token}`),
+      iterations: 100_000,
+      hash: 'SHA-256',
+    },
+    baseKey,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+}
+
+async function encryptCache(password: string, token: string, payload: unknown) {
+  const key = await deriveCacheKey(password, token);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const plaintext = new TextEncoder().encode(JSON.stringify(payload));
+  const cipherBuf = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plaintext);
+  return {
+    v: 1,
+    ts: Date.now(),
+    iv: base64FromBytes(iv),
+    cipher: base64FromBytes(new Uint8Array(cipherBuf)),
+  } satisfies CacheEnvelope;
+}
+
+async function decryptCache(password: string, token: string, envelope: CacheEnvelope) {
+  const key = await deriveCacheKey(password, token);
+  const iv = bytesFromBase64(envelope.iv);
+  const cipher = bytesFromBase64(envelope.cipher);
+  const plainBuf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, cipher);
+  const json = new TextDecoder().decode(new Uint8Array(plainBuf));
+  return JSON.parse(json) as unknown;
+}
+
 export default function ValidationHandler() {
   const { token = '' } = useParams();
   const [password, setPassword] = useState('');
@@ -28,11 +122,18 @@ export default function ValidationHandler() {
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState('');
 
+  const [cacheLoading, setCacheLoading] = useState(false);
+  const [cacheError, setCacheError] = useState('');
+  const [cacheRows, setCacheRows] = useState<Participant[] | null>(null);
+  const cacheKey = useMemo(() => `ignite26.validation_handler.cache:${token}`, [token]);
+
   const [query, setQuery] = useState('');
   const [lookupLoading, setLookupLoading] = useState(false);
   const [lookupError, setLookupError] = useState('');
   const [results, setResults] = useState<Participant[]>([]);
   const [selected, setSelected] = useState<Participant | null>(null);
+  const [notFoundValue, setNotFoundValue] = useState<string | null>(null);
+  const [pendingUpdate, setPendingUpdate] = useState<{ kind: 'payment' | 'checkin'; nextValue: boolean } | null>(null);
   const [updating, setUpdating] = useState<'payment' | 'checkin' | null>(null);
 
   const [cameraReady, setCameraReady] = useState(false);
@@ -55,6 +156,74 @@ export default function ValidationHandler() {
     return { res, data: await readJsonSafe<Record<string, unknown>>(res) };
   };
 
+  const persistCacheRows = useCallback(
+    async (rows: Participant[]) => {
+      const envelope = await encryptCache(password, token, { rows });
+      localStorage.setItem(cacheKey, JSON.stringify(envelope));
+    },
+    [cacheKey, password, token]
+  );
+
+  const buildLocalResults = useCallback(
+    (rows: Participant[], value: string) => {
+      const lookup = normalize(value);
+      if (!lookup) return [] as Participant[];
+
+      const byId = /^\d+$/.test(lookup) ? rows.find((r) => r.id === Number(lookup)) : undefined;
+      if (byId) return [byId];
+
+      if (/^\d+$/.test(lookup)) {
+        if (/^\d{13}$/.test(lookup)) {
+          const byRoll = rows.find((r) => normalize(r.roll_number) === lookup);
+          if (byRoll) return [byRoll];
+        }
+        const digits = normalizePhone(lookup);
+        if (/^\d{10}$/.test(digits)) {
+          const byPhone = rows.find((r) => normalizePhone(r.whatsapp_number) === digits);
+          if (byPhone) return [byPhone];
+        }
+      }
+
+      const email = lookup.toLowerCase();
+      if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        const byEmail = rows.find((r) => normalize(r.email).toLowerCase() === email);
+        if (byEmail) return [byEmail];
+      }
+
+      const byPayment = rows.find((r) => normalize(r.payment_id) === lookup);
+      if (byPayment) return [byPayment];
+
+      const needle = lookup.toLowerCase();
+      const matches = rows.filter((r) =>
+        [r.full_name, r.roll_number, r.email, r.payment_id, r.whatsapp_number]
+          .some((v) => normalize(v).toLowerCase().includes(needle))
+      );
+      return matches.slice(0, 20);
+    },
+    []
+  );
+
+  const refreshCache = useCallback(
+    async () => {
+      if (!unlocked) return;
+      setCacheLoading(true);
+      setCacheError('');
+      try {
+        const { res, data } = await apiCall({ action: 'export' });
+        if (!res.ok) throw new Error(getErrorMessage(data, 'Failed to load handler cache'));
+        const rows = Array.isArray((data as any)?.rows) ? ((data as any).rows as Participant[]) : [];
+        setCacheRows(rows);
+        await persistCacheRows(rows);
+      } catch (err: unknown) {
+        setCacheError(err instanceof Error ? err.message : 'Failed to load handler cache');
+        setCacheRows(null);
+      } finally {
+        setCacheLoading(false);
+      }
+    },
+    [apiCall, persistCacheRows, unlocked]
+  );
+
   const verifyPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
@@ -73,13 +242,26 @@ export default function ValidationHandler() {
   const runLookup = async (payload: { query?: string; qr_text?: string }) => {
     setLookupLoading(true);
     setLookupError('');
+    setNotFoundValue(null);
     try {
+      const localRows = cacheRows;
+      const raw = payload.qr_text ?? payload.query ?? '';
+      const value = parsePayloadToLookupValue(raw);
+
+      if (localRows && localRows.length > 0) {
+        const rows = buildLocalResults(localRows, value);
+        setResults(rows);
+        if (rows.length === 1) setSelected(rows[0]);
+        if (rows.length === 0) setNotFoundValue(value);
+        return;
+      }
+
       const { res, data } = await apiCall({ action: 'lookup', ...payload });
       if (!res.ok) throw new Error(getErrorMessage(data, 'Lookup failed'));
-      const rows = Array.isArray(data?.rows) ? (data.rows as Participant[]) : [];
+      const rows = Array.isArray((data as any)?.rows) ? ((data as any).rows as Participant[]) : [];
       setResults(rows);
       if (rows.length === 1) setSelected(rows[0]);
-      if (rows.length === 0) setLookupError('No matching registration found.');
+      if (rows.length === 0) setNotFoundValue(value);
     } catch (err: unknown) {
       setLookupError(err instanceof Error ? err.message : 'Lookup failed');
     } finally {
@@ -147,6 +329,40 @@ export default function ValidationHandler() {
 
   useEffect(() => {
     if (!unlocked) return;
+    setCacheError('');
+    setCacheRows(null);
+
+    const loadFromStorage = async () => {
+      try {
+        setCacheLoading(true);
+        const raw = localStorage.getItem(cacheKey);
+        if (!raw) {
+          await refreshCache();
+          return;
+        }
+        const envelope = JSON.parse(raw) as CacheEnvelope;
+        if (!envelope?.ts || Date.now() - Number(envelope.ts) > CACHE_TTL_MS) {
+          localStorage.removeItem(cacheKey);
+          await refreshCache();
+          return;
+        }
+        const decoded = await decryptCache(password, token, envelope);
+        const rows = Array.isArray((decoded as any)?.rows) ? ((decoded as any).rows as Participant[]) : null;
+        if (!rows) {
+          localStorage.removeItem(cacheKey);
+          await refreshCache();
+          return;
+        }
+        setCacheRows(rows);
+      } catch {
+        localStorage.removeItem(cacheKey);
+        await refreshCache();
+      } finally {
+        setCacheLoading(false);
+      }
+    };
+
+    loadFromStorage();
     if (canScan) {
       startCamera();
     } else {
@@ -172,12 +388,25 @@ export default function ValidationHandler() {
       if (updated) {
         setSelected(updated);
         setResults((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
+        setCacheRows((prev) => {
+          if (!prev) return prev;
+          const next = prev.map((x) => (x.id === updated.id ? updated : x));
+          persistCacheRows(next).catch(() => {
+            // ignore
+          });
+          return next;
+        });
       }
     } catch (err: unknown) {
       setLookupError(err instanceof Error ? err.message : 'Failed to update');
     } finally {
       setUpdating(null);
     }
+  };
+
+  const requestUpdate = (kind: 'payment' | 'checkin', nextValue: boolean) => {
+    if (!selected) return;
+    setPendingUpdate({ kind, nextValue });
   };
 
   if (!unlocked) {
@@ -214,12 +443,35 @@ export default function ValidationHandler() {
         <div className="mb-5">
           <h1 className="text-3xl font-black">Payment / Check-in Handler</h1>
           <p className="text-sm text-gray-400 mt-1">QR scan auto-runs when camera is active. Camera pauses while popup is open.</p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="text-xs text-gray-400">
+              {cacheLoading
+                ? 'Loading offline cache...'
+                : cacheRows
+                  ? `Offline cache ready (${cacheRows.length})`
+                  : 'Offline cache not ready'}
+            </span>
+            <button
+              type="button"
+              onClick={refreshCache}
+              disabled={cacheLoading}
+              className="px-3 py-1.5 rounded-lg border border-white/15 bg-white/5 text-gray-200 text-xs hover:bg-white/10 disabled:opacity-50"
+            >
+              Refresh cache
+            </button>
+            {cacheError && <span className="text-xs text-amber-300">{cacheError}</span>}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="rounded-2xl border border-white/10 bg-[#0d0d1f]/95 p-4">
             <p className="text-sm text-gray-300 mb-2 flex items-center gap-2"><Camera size={15} /> QR Scanner</p>
             <div className="aspect-video rounded-xl bg-black/40 border border-white/10 overflow-hidden relative">
+              {lookupLoading && (
+                <div className="absolute inset-0 bg-black/60 grid place-items-center z-10">
+                  <LoadingSpinner text="Searching..." />
+                </div>
+              )}
               {!cameraReady && !cameraError && (
                 <div className="absolute inset-0 grid place-items-center">
                   <LoadingSpinner text="Starting camera..." />
@@ -268,9 +520,7 @@ export default function ValidationHandler() {
                   <p className="text-xs text-gray-400">{p.roll_number} | {p.payment_id}</p>
                 </button>
               ))}
-              {!results.length && !lookupLoading && (
-                <p className="text-sm text-gray-500 py-3">No results yet.</p>
-              )}
+              {!results.length && !lookupLoading && <p className="text-sm text-gray-500 py-3">No results yet.</p>}
             </div>
           </div>
         </div>
@@ -311,18 +561,99 @@ export default function ValidationHandler() {
             </div>
             <div className="px-5 py-4 border-t border-white/10 flex flex-wrap gap-2">
               <button
-                onClick={() => handleUpdate('payment', !selected.payment_verified)}
+                onClick={() => requestUpdate('payment', !selected.payment_verified)}
                 disabled={updating !== null}
                 className="px-3 py-2 rounded-lg border border-cyan-400/30 bg-cyan-500/10 text-cyan-200 text-sm hover:bg-cyan-500/20 disabled:opacity-50"
               >
                 {updating === 'payment' ? 'Updating...' : selected.payment_verified ? 'Mark Payment Pending' : 'Mark Payment Verified'}
               </button>
               <button
-                onClick={() => handleUpdate('checkin', !selected.check_in_status)}
+                onClick={() => requestUpdate('checkin', !selected.check_in_status)}
                 disabled={updating !== null}
                 className="px-3 py-2 rounded-lg border border-emerald-400/30 bg-emerald-500/10 text-emerald-200 text-sm hover:bg-emerald-500/20 disabled:opacity-50"
               >
                 {updating === 'checkin' ? 'Updating...' : selected.check_in_status ? 'Undo Check-in' : 'Mark Checked In'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {notFoundValue !== null && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm p-4 grid place-items-center">
+          <div className="w-full max-w-md rounded-2xl border border-white/15 bg-[#0c0c1d]">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+              <h2 className="text-lg font-bold">No such data exists</h2>
+              <button onClick={() => setNotFoundValue(null)} className="p-2 rounded-lg hover:bg-white/10">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-5 text-sm text-gray-300">
+              <p>No matching registration found for:</p>
+              <p className="mt-2 font-mono text-xs text-gray-200 break-all rounded-lg bg-white/5 border border-white/10 px-3 py-2">{notFoundValue || '-'}</p>
+            </div>
+            <div className="px-5 py-4 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => setNotFoundValue(null)}
+                className="w-full px-4 py-2.5 rounded-xl border border-white/15 bg-white/5 text-gray-200 hover:bg-white/10"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selected && pendingUpdate && (
+        <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm p-4 grid place-items-center">
+          <div className="w-full max-w-md rounded-2xl border border-amber-400/25 bg-[#0c0c1d]">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+              <h2 className="text-lg font-bold text-amber-200">Confirm action</h2>
+              <button onClick={() => setPendingUpdate(null)} className="p-2 rounded-lg hover:bg-white/10">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-5 text-sm text-gray-300 space-y-3">
+              <p className="text-gray-200">You are about to change status for:</p>
+              <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+                <p className="font-semibold text-white">{selected.full_name}</p>
+                <p className="text-xs text-gray-400">{selected.roll_number} • {selected.payment_id}</p>
+              </div>
+
+              {pendingUpdate.kind === 'payment' ? (
+                <div className="space-y-1">
+                  <p><span className="text-gray-400">Current payment:</span> {selected.payment_verified ? 'Verified' : 'Pending'}</p>
+                  <p><span className="text-gray-400">New payment:</span> {pendingUpdate.nextValue ? 'Verified' : 'Pending'}</p>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <p><span className="text-gray-400">Current check-in:</span> {selected.check_in_status ? 'Checked In' : 'Not Checked In'}</p>
+                  <p><span className="text-gray-400">New check-in:</span> {pendingUpdate.nextValue ? 'Checked In' : 'Not Checked In'}</p>
+                </div>
+              )}
+
+              <p className="text-xs text-amber-200/90">This is a confirmation step. Nothing has been changed yet.</p>
+            </div>
+            <div className="px-5 py-4 border-t border-white/10 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setPendingUpdate(null)}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-white/15 bg-white/5 text-gray-200 hover:bg-white/10"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={updating !== null}
+                onClick={async () => {
+                  const next = pendingUpdate;
+                  setPendingUpdate(null);
+                  await handleUpdate(next.kind, next.nextValue);
+                }}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-amber-500/15 border border-amber-400/30 text-amber-100 hover:bg-amber-500/25 disabled:opacity-50"
+              >
+                {updating ? 'Updating...' : 'Confirm'}
               </button>
             </div>
           </div>
