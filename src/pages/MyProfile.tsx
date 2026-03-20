@@ -265,9 +265,9 @@ export default function MyProfile() {
       const qrCanvas = document.createElement('canvas');
       await QRCode.toCanvas(qrCanvas, qrPayload, {
         width: qrSize,
-        margin: 0,
+        margin: 4,
         errorCorrectionLevel: 'M',
-        color: { dark: '#dcc073', light: '#000000' },
+        color: { dark: '#000000', light: '#dcc073' },
       });
 
       ctx.save();
