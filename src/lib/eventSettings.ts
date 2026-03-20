@@ -23,7 +23,7 @@ export const defaultEventSettings: EventSettings = {
   title: "Ignite'26 Fresher Event",
   dateLabel: '23 March 2026',
   timeLabel: '11:00 AM Onwards',
-  venue: 'BLACK HORSE Multi Cuisine Restaurant And Banquet Hall, Vijay Chowk, Golghar, Gorakhpur',
+  venue: 'Knot Kitchen and Banquet, Gorakhpur',
   dressCodeMale: 'Formals',
   dressCodeFemale: 'Western Wear',
   countdownIso: '2026-03-23T11:00:00',
