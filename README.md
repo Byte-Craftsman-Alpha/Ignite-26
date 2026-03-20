@@ -91,6 +91,69 @@ Settings include:
 - Day flow timeline
 - Support note
 
+## Participant Uniqueness Rules
+
+- `email` is unique.
+- `roll_number` is allowed to repeat.
+- `whatsapp_number` is allowed to repeat.
+
+Registration behavior:
+
+- A registration with an existing `email` is rejected.
+- An existing participant may be updated only when both `roll_number` and `email` match.
+
+## Event Pass (PNG) + QR
+
+- Passes are generated as **PNG** using a template image (`/public/event-pass.png`).
+- QR code is rendered on the pass canvas via the `qrcode` library.
+
+QR scan reliability:
+
+- A **quiet zone** is included via `margin: 4`.
+- QR colors use a scanner-friendly scheme (`dark: #000000`, `light: #dcc073`).
+
+Where this is implemented:
+
+- `src/pages/MyProfile.tsx` (single participant download)
+- `src/pages/admin/BulkPassDownload.tsx` (bulk ZIP generation)
+
+## Admin: Bulk Pass Download
+
+Page:
+
+- `/admin/bulk-passes`
+
+Behavior:
+
+- Select one or more participants.
+- Download all passes as a single ZIP (generated client-side via `jszip`).
+
+## Payment / Check-in Handler (Validation Handler)
+
+Page:
+
+- `/validate/:token`
+
+Behavior:
+
+- After unlocking, the handler preloads participant data once and stores it in encrypted localStorage.
+- Subsequent scans/searches use the local cache to avoid repeated server fetches.
+- Cache can be refreshed manually from the page.
+
+Security notes:
+
+- Cache is encrypted using Web Crypto (`AES-GCM`) with a key derived from the handler password.
+- Tampering results in decryption failure and forces a refetch.
+
+Implementation:
+
+- Client: `src/pages/ValidationHandler.tsx`
+- API: `server/validation-handler.js`
+
+## Admin Dashboard: Mobile Menu Positioning
+
+Admin dashboard dropdowns (Quick Links / Data Tools / Access Options / Handler Options) clamp their position so menus stay inside the viewport on mobile.
+
 ## Media Upload Behavior
 
 - Public uploads are stored with status `pending` and require admin approval.
