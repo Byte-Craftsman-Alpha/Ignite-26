@@ -1124,6 +1124,13 @@ export default function AdminDashboard() {
                 <Trophy size={14} /> Winners Manager
               </Link>
               <Link
+                to="/admin/bulk-passes"
+                onClick={() => setOpenPanelMenu(null)}
+                className="w-full px-3 py-2.5 text-sm text-fuchsia-200 hover:bg-fuchsia-500/10 flex items-center gap-2 border-t border-white/5"
+              >
+                <Download size={14} /> Bulk Pass Download
+              </Link>
+              <Link
                 to="/admin/event-settings"
                 onClick={() => setOpenPanelMenu(null)}
                 className="w-full px-3 py-2.5 text-sm text-emerald-200 hover:bg-emerald-500/10 flex items-center gap-2 border-t border-white/5"
