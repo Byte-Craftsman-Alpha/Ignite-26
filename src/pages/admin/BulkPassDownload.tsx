@@ -151,7 +151,7 @@ async function generatePassPng(template: HTMLImageElement, participant: Particip
     width: qrSize,
     margin: 0,
     errorCorrectionLevel: 'M',
-    color: { dark: '#dcc073', light: '#00000000' },
+    color: { dark: '#dcc073', light: '#000000' },
   });
 
   ctx.save();
